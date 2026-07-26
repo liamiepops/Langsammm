@@ -62,6 +62,7 @@
         Object.assign(state, d.settings);
         syncPanel();
         pushParams();
+        pushWatch();
         rescanRates();
       }
     } else if (d.type === 'wasm') {
@@ -363,6 +364,23 @@
 }
 .wrap.closed { display: none; }
 .wrap * { box-sizing: border-box; }
+
+/* Collapsed state. Never disappears entirely, so the panel is always
+   recoverable without knowing the hotkey. */
+.launch {
+  position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;
+  display: none; align-items: center; gap: 7px; box-sizing: border-box;
+  background: #101219; border: 1px solid #2a2f3b; border-radius: 8px;
+  padding: 7px 10px; cursor: pointer; opacity: .72;
+  box-shadow: 0 6px 22px rgba(0,0,0,.5);
+  font: 600 9.5px/1 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  letter-spacing: .12em; text-transform: uppercase; color: #7f879a;
+  transition: opacity .12s, color .12s;
+}
+.launch.show { display: flex; }
+.launch:hover { opacity: 1; color: #e3e7f0; }
+.launch svg { display: block; flex: none; }
+@media (prefers-reduced-motion: reduce) { .launch { transition: none; } }
 
 .hd { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
 .hd svg { display: block; flex: none; }
@@ -803,7 +821,11 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         chip,
         h('span', { class: 'sp' }),
         power,
-        h('button', { onclick: () => togglePanel(false), 'aria-label': 'close' }, '×')
+        h(
+          'button',
+          { onclick: () => togglePanel(false), title: 'collapse (alt+S)', 'aria-label': 'collapse' },
+          '×'
+        )
       ),
       h('div', { class: 'plotwrap' }, cv, key),
       h(
@@ -829,9 +851,28 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     );
     controls._sideRow = sideRow;
 
-    root.append(style, wrap);
+    const launch = h(
+      'div',
+      {
+        class: 'launch',
+        title: 'show the Slowform panel (alt+S)',
+        role: 'button',
+        tabindex: '0',
+        onclick: () => togglePanel(true),
+        onkeydown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            togglePanel(true);
+          }
+        },
+      },
+      markSvg(12),
+      'slowform'
+    );
+
+    root.append(style, wrap, launch);
     (document.body || document.documentElement).append(host);
-    panel = { host, wrap };
+    panel = { host, wrap, launch };
 
     plotDpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.round(318 * plotDpr);
@@ -853,6 +894,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     controls._cmp.set();
     controls._sideRow.className = state.stereoMs ? 'ctl' : 'ctl dim';
     panel.wrap.className = state.panelOpen ? 'wrap' : 'wrap closed';
+    panel.launch.className = state.panelOpen ? 'launch' : 'launch show';
     paintMeters();
   }
 
@@ -873,6 +915,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
   function refreshStatus() {
     if (!panel) return;
+    // A single-page app that replaces body content would take the panel with
+    // it, and then toggling would flip a flag with nothing left on screen to
+    // show. Put it back rather than leaving the user with no way in.
+    if (!panel.host.isConnected) {
+      (document.body || document.documentElement).append(panel.host);
+    }
     paintMeters();
     const el = controls._status.el;
     let msg = '';

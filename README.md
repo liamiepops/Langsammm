@@ -172,6 +172,12 @@ first on a fresh clone or Chrome will refuse to load the folder.
 Then open YouTube. Panel hotkeys: **alt+S** show or hide, **alt+X** on or off,
 **alt+A** hold to hear the dry slowed version.
 
+Closing the panel collapses it to a small pill in the same corner rather than
+hiding it completely, so it is always recoverable by clicking. The popup carries
+a show or hide control as well, which works even if the page never sees the
+hotkey. If the page detaches the panel during navigation it is put back on the
+next status tick.
+
 The panel plots the spectral envelope before and after the gain it is applying,
 updated at 15 Hz. Cyan is the original envelope, amber is where the warp has
 moved it, and the filled area between them is the gain. Under it sit four live

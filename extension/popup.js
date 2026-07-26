@@ -13,6 +13,7 @@ const DEFAULTS = {
 };
 
 const enabledBtn = document.getElementById('enabled');
+const panelBtn = document.getElementById('panel');
 const semSel = document.getElementById('semitones');
 const rateEl = document.getElementById('rate');
 
@@ -27,6 +28,8 @@ let state = Object.assign({}, DEFAULTS);
 
 function render() {
   enabledBtn.className = state.enabled ? 'on' : '';
+  panelBtn.className = state.panelOpen ? 'on' : '';
+  panelBtn.textContent = state.panelOpen ? 'showing' : 'show';
   semSel.value = String(state.semitones);
   rateEl.textContent = (Math.pow(2, -state.semitones / 12) * 100).toFixed(2) + '%';
 }
@@ -43,6 +46,10 @@ chrome.storage.local.get('settings', (r) => {
 
 enabledBtn.onclick = () => {
   state.enabled = !state.enabled;
+  commit();
+};
+panelBtn.onclick = () => {
+  state.panelOpen = !state.panelOpen;
   commit();
 };
 semSel.onchange = () => {
