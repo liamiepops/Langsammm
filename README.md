@@ -125,6 +125,9 @@ calibration note before trusting the magnitude.
 
 ## Installing the extension
 
+The wasm module is a build artifact and is not tracked, so run `build.ps1`
+first on a fresh clone or Chrome will refuse to load the folder.
+
 1. Open `chrome://extensions`
 2. Turn on Developer mode
 3. Load unpacked, and pick the `extension` folder
