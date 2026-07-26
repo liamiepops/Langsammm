@@ -19,7 +19,11 @@
   "web_accessible_resources": [
     {
       "resources": ["page.js", "worklet.js", "slowform.wasm"],
-      "matches": ["*://*/*"]
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.soundcloud.com/*",
+        "*://*.bandcamp.com/*"
+      ]
     }
   ],
   "content_security_policy": {
