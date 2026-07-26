@@ -9,7 +9,23 @@
   if (window.__slowformLoaded) return;
   window.__slowformLoaded = true;
 
-  const BASE = (document.currentScript && document.currentScript.dataset.base) || '';
+  // Chrome loads this by injected script tag, which carries the base URL on the
+  // tag itself. Firefox loads it as a MAIN-world content script, where there is
+  // no tag to read, so the bridge has to send the URL over instead. Only
+  // ensureModule needs it, and that is already async, so it waits.
+  let BASE = (document.currentScript && document.currentScript.dataset.base) || null;
+  const baseWaiters = [];
+
+  function baseUrl() {
+    return BASE ? Promise.resolve(BASE) : new Promise((res) => baseWaiters.push(res));
+  }
+
+  function setBase(b) {
+    if (BASE || !b) return;
+    BASE = b;
+    baseWaiters.splice(0).forEach((f) => f(BASE));
+  }
+
   const TO_PAGE = 'slowform:to-page';
   const FROM_PAGE = 'slowform:from-page';
   const IS_TOP = window.top === window;
@@ -65,6 +81,8 @@
         pushWatch();
         rescanRates();
       }
+    } else if (d.type === 'base') {
+      setBase(d.base);
     } else if (d.type === 'wasm') {
       wasmBytes = d.bytes;
       wasmWaiters.splice(0).forEach((f) => f(wasmBytes));
@@ -74,7 +92,19 @@
     }
   });
 
+  // Two content scripts at document_start have no guaranteed order, and under
+  // the MAIN-world route this one may well win. Keep asking until the bridge
+  // answers rather than assuming it was listening.
   toBridge({ type: 'hello' });
+  let helloTries = 0;
+  const helloTimer = setInterval(() => {
+    if ((BASE && wasmBytes) || ++helloTries > 25) {
+      clearInterval(helloTimer);
+      if (!BASE && !wasmError) setStatus('extension bridge did not respond');
+      return;
+    }
+    toBridge({ type: 'hello' });
+  }, 120);
 
   let saveTimer = null;
   function save() {
@@ -155,10 +185,12 @@
 
   function ensureModule(c) {
     if (!modulePromise) {
-      modulePromise = c.audioWorklet.addModule(BASE + 'worklet.js').catch((e) => {
-        modulePromise = null;
-        throw e;
-      });
+      modulePromise = baseUrl()
+        .then((b) => c.audioWorklet.addModule(b + 'worklet.js'))
+        .catch((e) => {
+          modulePromise = null;
+          throw e;
+        });
     }
     return modulePromise;
   }

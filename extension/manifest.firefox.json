@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "Slowform",
+  "version": "0.1.0",
+  "description": "Plays audio slowed by N semitones and warps the spectral envelope back up by the same interval.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "slowform@liamiepops.github.io",
+      "strict_min_version": "128.0"
+    }
+  },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.soundcloud.com/*",
+        "*://*.bandcamp.com/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.soundcloud.com/*",
+        "*://*.bandcamp.com/*"
+      ],
+      "js": ["page.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["page.js", "worklet.js", "slowform.wasm"],
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.soundcloud.com/*",
+        "*://*.bandcamp.com/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Slowform",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  }
+}

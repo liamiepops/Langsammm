@@ -20,6 +20,7 @@
     if (!d || d.__slowform !== FROM_PAGE) return;
 
     if (d.type === 'hello') {
+      toPage({ type: 'base', base: BASE });
       sendSettings();
       sendWasm();
     } else if (d.type === 'save') {
@@ -54,9 +55,23 @@
     }
   });
 
-  const s = document.createElement('script');
-  s.src = BASE + 'page.js';
-  s.dataset.base = BASE;
-  s.onload = () => s.remove();
-  (document.head || document.documentElement).prepend(s);
+  // Which route into the page's world this build uses.
+  //
+  // Chrome governs a content-script-injected script tag by the *extension's*
+  // CSP, so the tag runs even on YouTube. Firefox governs it by the *page's*
+  // CSP and blocks it (bugzilla 1267027, still open), but exempts a declarative
+  // MAIN-world content script from page CSP instead. So each build declares the
+  // route that works for it, and this reads the manifest to find out which,
+  // rather than sniffing the browser.
+  const declared = (chrome.runtime.getManifest().content_scripts || []).some(
+    (cs) => cs.world === 'MAIN' && (cs.js || []).indexOf('page.js') !== -1
+  );
+
+  if (!declared) {
+    const s = document.createElement('script');
+    s.src = BASE + 'page.js';
+    s.dataset.base = BASE;
+    s.onload = () => s.remove();
+    (document.head || document.documentElement).prepend(s);
+  }
 })();

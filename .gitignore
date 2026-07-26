@@ -9,6 +9,10 @@ target/
 # want a clone to be loadable in Chrome without a Rust toolchain.
 extension/slowform.wasm
 
+# Packaged output. build.ps1 assembles dist/firefox from extension/ with the
+# Firefox manifest swapped in.
+dist/
+
 # Intermediate curve dumps from tools/envsnap.js. The mockups embed their own
 # copy of the data, so these are not needed to render anything.
 design/snap*.json
