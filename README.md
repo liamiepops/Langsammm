@@ -145,11 +145,6 @@ Every control carries a **?** that opens an explanation of what it does.
 Snapshots are only sent while the panel is open, so a closed panel costs
 nothing.
 
-To work on the panel without reloading the extension, open
-`design/panel-preview.html`. It loads the real `extension/page.js` with the
-audio API stubbed and feeds it a recorded analysis frame, so the panel is built
-by the shipping code rather than a copy.
-
 ## What is verified
 
 Rust tests (`cargo test`):
@@ -234,6 +229,5 @@ tools/gainwobble.js      how hard the warp works and how steady it is
 tools/banddiff.js        octave-band difference between two renders
 tools/envsnap.js         dumps one frame's envelope and gain curve as JSON
 tools/worklet-harness.js runs worklet.js under a stubbed worklet scope
-design/panel-preview.html  drives the real panel with the audio stubbed
 design/panel-mockups.html  the three directions the panel was chosen from
 ```
