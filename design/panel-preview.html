@@ -1,0 +1,138 @@
+<title>Slowform panel preview</title>
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: #0b0d12 radial-gradient(1200px 600px at 30% 20%, #171b24, #0b0d12 70%);
+    color: #7f879a;
+    font: 13px/1.6 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  }
+  .note {
+    position: fixed; left: 24px; top: 24px; max-width: 46ch;
+  }
+  .note h1 { font-size: 15px; color: #e3e7f0; margin: 0 0 8px; font-weight: 620; }
+  .note p { margin: 8px 0; }
+  .note b { color: #b6bccb; font-weight: 600; }
+  kbd {
+    font: 11px ui-monospace, Consolas, monospace; background: #1b1f29; color: #d3d8e4;
+    border: 1px solid #2a2f3b; border-radius: 4px; padding: 1px 5px;
+  }
+  .row { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font: 12px ui-sans-serif, system-ui, sans-serif; color: #e3e7f0; background: #222634;
+    border: 1px solid #2a2f3b; border-radius: 6px; padding: 5px 10px; cursor: pointer;
+  }
+  button:hover { background: #2c3140; }
+</style>
+
+<div class="note">
+  <h1>Slowform panel preview</h1>
+  <p>
+    This page loads the real <b>extension/page.js</b> with the audio API stubbed
+    out, so the panel you see is built by the shipping code rather than a copy.
+    Edit <b>page.js</b> and reload to see changes without touching YouTube.
+  </p>
+  <p>
+    Curve data is a real analysis frame of <b>demo-material.wav</b>, gently
+    animated. The controls are live: dragging <b>amount</b> rescales the amber
+    curve exactly as it will in the browser.
+  </p>
+  <p>
+    <kbd>alt+S</kbd> panel &nbsp; <kbd>alt+X</kbd> on/off &nbsp;
+    <kbd>alt+A</kbd> hold to compare
+  </p>
+  <div class="row">
+    <button id="silence">simulate silence</button>
+    <button id="ceil">simulate ceiling at &minus;2.4 dB</button>
+    <button id="noisy">simulate high wobble</button>
+  </div>
+</div>
+
+<audio id="fake"></audio>
+
+<script>
+  // ---- real analysis frame of demo-material.wav, envelope resolution 500 Hz
+  const ENV = [9.4,9.2,8.9,8.5,8.1,7.6,7.2,6.6,6,5.3,4.6,3.8,2.9,2,0.9,-0.2,-1.3,-2.5,-3.8,-5,-6.3,-7.4,-8.5,-9.4,-10.1,-10.5,-10.5,-9.9,-8.9,-7.2,-4.9,-2,1.4,5.1,9,12.7,15.8,17.9,18.8,18.2,16.2,13,9.1,4.8,0.5,-3.8,-8.3,-12.7,-16.2,-17,-13.7,-6.6,1.3,6.2,7.3,7.7,9.5,9.4,4.3,-0.6,-0.3,0.1,-0.8,-0.7,-5.7,-12.3,-20.6,-28.4,-30.7,-32.8,-35.3,-39,-36.9,-33.3,-31.7,-31.5,-31.7,-31.6,-31.9,-32.2,-33,-35.1,-40.1,-36.5,-34.9,-33.8,-34.2,-35.1,-38,-41.3];
+  const WRP = [10,9.8,9.6,9.4,9,8.7,8.4,8,7.5,7,6.5,5.9,5.2,4.4,3.6,2.7,1.7,0.7,-0.4,-1.6,-2.8,-4,-5.3,-6.5,-7.7,-8.7,-9.6,-10.2,-10.4,-10.3,-9.7,-8.5,-6.8,-4.3,-1.3,2.2,6,9.9,13.4,16.3,18.3,18.8,17.8,15.6,12.2,8.1,3.9,-0.4,-4.8,-9.3,-13.6,-16.6,-16.6,-12.4,-4.8,2.7,6.7,7.3,8,9.8,8.6,2.9,-0.9,0,-0.2,-0.7,-1.3,-7.4,-13.7,-22.9,-29,-31.5,-32.8,-36.4,-39.4,-35.1,-33.6,-31.8,-31,-31.1,-31.3,-31.6,-32.1,-32.8,-35.6,-40,-36.3,-34.2,-34.1,-33.9];
+
+  // ---- stubs. page.js only needs these five surfaces.
+  let liveNode = null;
+
+  class FakeWorkletNode {
+    constructor() {
+      const self = this;
+      this._h = null;
+      this.port = {
+        postMessage() {},
+        set onmessage(fn) { self._h = fn; },
+        get onmessage() { return self._h; },
+      };
+      liveNode = this;
+    }
+    connect() {}
+    disconnect() {}
+  }
+  window.AudioWorkletNode = FakeWorkletNode;
+
+  window.AudioContext = class {
+    constructor() {
+      this.state = 'running';
+      this.destination = {};
+      this.audioWorklet = { addModule: () => Promise.resolve() };
+    }
+    createMediaElementSource() {
+      return { connect() {}, disconnect() {} };
+    }
+    resume() { return Promise.resolve(); }
+  };
+
+  // ---- drive the panel once page.js has built it
+  let mode = 'normal';
+  let t = 0;
+
+  function tick() {
+    if (!liveNode || !liveNode._h) return;
+    t += 1;
+
+    const n = ENV.length;
+    const env = new Float32Array(n);
+    const out = new Float32Array(n);
+    const breathe = Math.sin(t / 14) * 2.2;
+    const jitter = mode === 'noisy' ? 5 : 1;
+
+    for (let i = 0; i < n; i++) {
+      const wob = Math.sin(t / 3 + i / 4) * 0.6 * jitter;
+      const lift = mode === 'silence' ? -70 : breathe;
+      env[i] = ENV[i] + lift;
+      out[i] = WRP[i] + lift + wob;
+    }
+
+    liveNode._h({
+      data: {
+        type: 'snap',
+        env,
+        out,
+        depth: mode === 'silence' ? 0.1 : mode === 'noisy' ? 6.9 : 6.2 + Math.sin(t / 20) * 0.2,
+        wobble: mode === 'silence' ? 0.1 : mode === 'noisy' ? 5.4 : 2.9 + Math.sin(t / 17) * 0.15,
+        limiter: mode === 'ceil' ? 0.758 : 1,
+      },
+    });
+  }
+
+  const script = document.createElement('script');
+  script.src = '../extension/page.js';
+  script.dataset.base = '../extension/';
+  script.onload = () => {
+    setTimeout(() => {
+      if (liveNode && liveNode._h) {
+        liveNode._h({ data: { type: 'ready', latency: 2048 / 48000, fftSize: 2048, sampleRate: 48000 } });
+      }
+      setInterval(tick, 66);
+    }, 120);
+  };
+  document.body.append(script);
+
+  document.getElementById('silence').onclick = () => (mode = mode === 'silence' ? 'normal' : 'silence');
+  document.getElementById('ceil').onclick = () => (mode = mode === 'ceil' ? 'normal' : 'ceil');
+  document.getElementById('noisy').onclick = () => (mode = mode === 'noisy' ? 'normal' : 'noisy');
+</script>

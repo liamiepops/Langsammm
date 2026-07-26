@@ -1,0 +1,680 @@
+<title>Slowform panel: three directions</title>
+<style>
+  :root {
+    --page-bg: #f4f5f7;
+    --page-fg: #16181d;
+    --page-dim: #5c6373;
+    --page-rule: #d9dce3;
+    --page-card: #ffffff;
+    --accent: #b26a12;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #0a0b0f;
+      --page-fg: #e3e7f0;
+      --page-dim: #868d9e;
+      --page-rule: #23262f;
+      --page-card: #121419;
+      --accent: #f2a54a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #0a0b0f;
+    --page-fg: #e3e7f0;
+    --page-dim: #868d9e;
+    --page-rule: #23262f;
+    --page-card: #121419;
+    --accent: #f2a54a;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f4f5f7;
+    --page-fg: #16181d;
+    --page-dim: #5c6373;
+    --page-rule: #d9dce3;
+    --page-card: #ffffff;
+    --accent: #b26a12;
+  }
+
+  /* Panel tokens. These never follow the page theme: the panel overlays a
+     video player, so it commits to dark. */
+  .pnl {
+    --ground: #101219;
+    --surface: #191c25;
+    --raised: #222634;
+    --rule: #2a2f3b;
+    --ink: #e3e7f0;
+    --dim: #7f879a;
+    --ref: #5bc0d0;
+    --warp: #f2a54a;
+    --alert: #e06a5f;
+    --ok: #6bbf8a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font: 15px/1.6 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1180px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  .eyebrow {
+    font: 600 10px/1 ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--page-dim);
+  }
+
+  h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.1;
+    letter-spacing: -.022em;
+    font-weight: 650;
+    margin: 12px 0 0;
+    text-wrap: balance;
+    max-width: 20ch;
+  }
+
+  .lede { max-width: 62ch; color: var(--page-dim); margin: 18px 0 0; }
+  .lede strong { color: var(--page-fg); font-weight: 600; }
+
+  .constraints {
+    margin: 32px 0 0;
+    padding: 18px 20px;
+    border: 1px solid var(--page-rule);
+    border-radius: 10px;
+    background: var(--page-card);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px 28px;
+  }
+  .constraints div { font-size: 13px; line-height: 1.5; }
+  .constraints b {
+    display: block;
+    font: 600 10px/1.6 ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--page-dim);
+  }
+
+  .options { margin-top: 64px; display: flex; flex-direction: column; gap: 72px; }
+
+  .opt { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 44px; align-items: start; }
+  @media (max-width: 860px) { .opt { grid-template-columns: 1fr; gap: 28px; } }
+
+  .stage {
+    background: linear-gradient(160deg, #05070b 0%, #0e1017 100%);
+    border: 1px solid var(--page-rule);
+    border-radius: 12px;
+    padding: 26px 20px;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+  }
+
+  .opt h2 { font-size: 22px; letter-spacing: -.015em; font-weight: 640; margin: 10px 0 0; }
+  .opt .who { color: var(--accent); font-weight: 600; font-size: 13px; margin: 6px 0 0; }
+  .opt p { max-width: 54ch; font-size: 14px; }
+  .opt ul { max-width: 54ch; font-size: 14px; padding-left: 18px; margin: 14px 0 0; }
+  .opt li { margin: 7px 0; }
+
+  .cost {
+    margin-top: 20px;
+    border-left: 2px solid var(--accent);
+    padding: 4px 0 4px 14px;
+    font-size: 13px;
+    color: var(--page-dim);
+  }
+  .cost b { color: var(--page-fg); font-weight: 600; }
+
+  code, .mono {
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  code { font-size: .9em; background: color-mix(in srgb, var(--page-dim) 14%, transparent); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---------------------------------------------------------------- panel */
+
+  .pnl {
+    background: var(--ground);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+    color: var(--ink);
+    font: 12px/1.45 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    padding: 11px 13px 13px;
+    user-select: none;
+    flex: none;
+  }
+
+  .pnl-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .pnl-name { font-weight: 640; letter-spacing: .015em; }
+  .pnl-sp { flex: 1; }
+
+  .chip {
+    font: 600 10px/1 ui-monospace, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .04em;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: var(--raised);
+    color: var(--dim);
+  }
+  .chip.live { color: var(--warp); background: color-mix(in srgb, var(--warp) 16%, transparent); }
+
+  .pwr {
+    width: 30px; height: 17px; border-radius: 9px; position: relative;
+    background: color-mix(in srgb, var(--ok) 34%, #000); border: 1px solid color-mix(in srgb, var(--ok) 50%, #000);
+  }
+  .pwr::after {
+    content: ""; position: absolute; top: 1px; right: 1px; width: 13px; height: 13px;
+    border-radius: 50%; background: #dff3e6;
+  }
+
+  .lbl {
+    font: 600 9px/1 ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--dim);
+  }
+
+  .ctl { display: flex; align-items: center; gap: 9px; margin: 7px 0; }
+  .ctl .nm { flex: 1; color: #b6bccb; font-size: 11.5px; display: flex; align-items: center; gap: 5px; }
+  .ctl .v { font: 11px/1 ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; color: var(--ink); width: 52px; text-align: right; }
+  .ctl.off .nm, .ctl.off .v { opacity: .38; }
+
+  .q {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 1px solid var(--rule); color: var(--dim);
+    font: 700 8px/10px ui-sans-serif, system-ui, sans-serif;
+    text-align: center; cursor: help; flex: none;
+  }
+  .q.on { border-color: var(--warp); color: var(--warp); }
+
+  .trk { position: relative; width: 112px; height: 3px; border-radius: 2px; background: var(--raised); }
+  .trk i { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--warp); }
+  .trk b {
+    position: absolute; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px;
+    border-radius: 50%; background: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.7);
+  }
+  .trk.zero i { background: var(--rule); }
+
+  .seg { display: flex; background: var(--raised); border-radius: 5px; padding: 2px; gap: 2px; }
+  .seg span { font: 600 10px/1 ui-sans-serif, system-ui, sans-serif; padding: 4px 7px; border-radius: 3px; color: var(--dim); }
+  .seg span.sel { background: #343a4a; color: var(--ink); }
+
+  .rule { height: 1px; background: var(--rule); margin: 11px -13px; }
+
+  /* tooltip */
+  .tip {
+    position: relative;
+    background: #262b38;
+    border: 1px solid #3a4152;
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #d3d8e4;
+    box-shadow: 0 6px 20px rgba(0,0,0,.55);
+    margin: 6px 0 2px;
+  }
+  .tip::before {
+    content: ""; position: absolute; top: -5px; left: 22px; width: 8px; height: 8px;
+    background: #262b38; border-left: 1px solid #3a4152; border-top: 1px solid #3a4152;
+    transform: rotate(45deg);
+  }
+  .tip b { color: #fff; font-weight: 600; }
+  .tip .num { color: var(--warp); font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+  .cmp {
+    margin-top: 11px; width: 100%; border: 1px solid var(--rule); background: var(--raised);
+    border-radius: 6px; padding: 7px; color: #b6bccb;
+    font: 600 10.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .05em; text-align: center;
+  }
+
+  /* readout grid for design A */
+  .ro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--rule); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+  .ro div { background: var(--surface); padding: 6px 7px; }
+  .ro .k { font: 600 8.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .ro .n { font: 12px/1.3 ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .ro .n.warp { color: var(--warp); }
+  .ro .n.quiet { color: var(--dim); }
+
+  canvas { display: block; border-radius: 6px; background: var(--surface); }
+
+  .plotwrap { position: relative; }
+  .plotkey {
+    position: absolute; left: 8px; top: 7px; display: flex; gap: 10px;
+    font: 600 8.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .09em; text-transform: uppercase;
+  }
+  .plotkey i { display: inline-block; width: 7px; height: 2px; margin-right: 4px; vertical-align: middle; }
+
+  /* design B stages */
+  .stg { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 9px 10px; }
+  .stg + .stg { margin-top: 6px; }
+  .stg-hd { display: flex; align-items: center; gap: 7px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warp); flex: none; }
+  .dot.idle { background: #3a4152; }
+  .stg-hd .t { font: 600 9.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .13em; text-transform: uppercase; flex: 1; }
+  .stg-hd .s { font: 10px/1 ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; color: var(--dim); }
+  .flow { height: 10px; margin: 0 0 0 13px; border-left: 1px solid var(--rule); }
+
+  .meter { height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--ok); }
+  .meter i.hot { background: var(--alert); }
+
+  /* design C */
+  .ab { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; background: var(--rule); padding: 3px; border-radius: 8px; }
+  .ab div { padding: 9px 6px; border-radius: 5px; text-align: center; background: var(--surface); }
+  .ab .st { font: 600 9px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .11em; text-transform: uppercase; color: var(--dim); }
+  .ab .d { font: 11px/1.3 ui-monospace, Consolas, monospace; color: var(--dim); margin-top: 5px; }
+  .ab div.on { background: color-mix(in srgb, var(--warp) 20%, var(--surface)); }
+  .ab div.on .st { color: var(--warp); }
+  .ab div.on .d { color: var(--ink); }
+
+  .big { font: 300 30px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.02em; }
+  .big small { font-size: 13px; color: var(--dim); font-weight: 400; }
+
+  .disc { display: flex; align-items: center; gap: 7px; color: var(--dim); font-size: 11px; padding: 8px 0 2px; }
+  .disc::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+  .verdict {
+    margin-top: 76px; border-top: 1px solid var(--page-rule); padding-top: 30px;
+  }
+  .verdict h2 { font-size: 20px; letter-spacing: -.015em; margin: 0 0 12px; }
+  .verdict p { max-width: 62ch; font-size: 14.5px; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="shell">
+  <div class="eyebrow">Slowform &middot; overlay panel</div>
+  <h1>Three directions for the on-page panel</h1>
+  <p class="lede">
+    The panel currently lists six sliders with no indication of what any of them
+    are doing to the sound. Each direction below solves that differently.
+    Throughout, <strong>amber is always the warped signal</strong> and
+    <strong>cyan is always the original</strong>, so the colour carries the idea
+    rather than just decorating it. The plot in direction A is drawn from a real
+    frame of <code>demo-material.wav</code>, not a sketch.
+  </p>
+
+  <div class="constraints">
+    <div><b>Context</b>It floats over a video player, so it commits to dark and stays out of the way.</div>
+    <div><b>Width</b>296px today. A and B want 340&ndash;360px, C fits in 300px.</div>
+    <div><b>Type</b>System stack only. An extension panel cannot ship a webfont, so hierarchy comes from weight and tracking.</div>
+    <div><b>Numbers</b>Everything numeric is monospaced and tabular, because these values are read while they move.</div>
+  </div>
+
+  <div class="options">
+
+    <!-- ============================================ A -->
+    <section class="opt">
+      <div class="stage">
+        <div class="pnl" style="width:344px">
+          <div class="pnl-hd">
+            <span class="pnl-name">Slowform</span>
+            <span class="chip live">&minus;3 st &middot; 84.09%</span>
+            <span class="pnl-sp"></span>
+            <span class="pwr"></span>
+          </div>
+
+          <div class="plotwrap">
+            <canvas id="gainplot" width="636" height="200" style="width:318px;height:100px"></canvas>
+            <div class="plotkey">
+              <span style="color:#5bc0d0"><i style="background:#5bc0d0"></i>original</span>
+              <span style="color:#f2a54a"><i style="background:#f2a54a"></i>warped</span>
+            </div>
+          </div>
+
+          <div class="ro">
+            <div><div class="k">depth</div><div class="n warp">6.2 dB</div></div>
+            <div><div class="k">wobble</div><div class="n">3.0 dB</div></div>
+            <div><div class="k">ceiling</div><div class="n quiet">0.0 dB</div></div>
+            <div><div class="k">delay</div><div class="n quiet">43 ms</div></div>
+          </div>
+
+          <div class="rule"></div>
+
+          <div class="ctl">
+            <span class="nm">amount<span class="q">?</span></span>
+            <span class="trk"><i style="width:100%"></i><b style="left:100%"></b></span>
+            <span class="v">100%</span>
+          </div>
+          <div class="ctl">
+            <span class="nm">envelope res<span class="q on">?</span></span>
+            <span class="trk"><i style="width:26%"></i><b style="left:26%"></b></span>
+            <span class="v">500 Hz</span>
+          </div>
+
+          <div class="tip">
+            Controls how much detail the envelope may contain.
+            Below <span class="num">400 Hz</span> the shift stops getting stronger
+            (<b>depth</b> holds at <span class="num">6.1 dB</span>) but the gain
+            starts fluctuating between frames (<b>wobble</b> rises to
+            <span class="num">4.4 dB</span>), heard as shimmer.
+          </div>
+
+          <div class="ctl">
+            <span class="nm">crossover<span class="q">?</span></span>
+            <span class="trk zero"><i style="width:0"></i><b style="left:0"></b></span>
+            <span class="v">off</span>
+          </div>
+          <div class="ctl">
+            <span class="nm">transient relax<span class="q">?</span></span>
+            <span class="trk zero"><i style="width:0"></i><b style="left:0"></b></span>
+            <span class="v">0%</span>
+          </div>
+          <div class="ctl">
+            <span class="nm">stereo<span class="q">?</span></span>
+            <span class="seg"><span class="sel">L/R</span><span>M/S</span></span>
+            <span class="v">&nbsp;</span>
+          </div>
+
+          <div class="cmp">HOLD ALT+A FOR SLOWED ONLY</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow">Direction A</div>
+        <h2>Scope</h2>
+        <p class="who">For when you want to see the algorithm working.</p>
+        <p>
+          The gain curve is the whole effect in one picture: everything Slowform
+          does is a per-bin gain, so plotting it leaves nothing hidden. The two
+          envelopes are drawn over each other and the amber fill between them is
+          literally what you are hearing.
+        </p>
+        <ul>
+          <li><b>Depth</b> and <b>wobble</b> as live numbers turn the envelope-res tradeoff into something you watch instead of guess at. Depth stops rising, wobble keeps climbing, and you can see the moment it stops being worth it.</li>
+          <li>Ceiling and delay sit in the same strip, so you always know whether the limiter is colouring what you are judging.</li>
+          <li>Tooltips carry the measured numbers rather than generic descriptions.</li>
+        </ul>
+        <div class="cost">
+          <b>Build cost: highest.</b> Needs a new wasm export to snapshot the
+          envelope, warped envelope and gain into a buffer, posted to the panel
+          at about 15 Hz. Roughly 50 lines of Rust, a message in the worklet, and
+          a canvas draw. Depth and wobble are cheap running statistics over the
+          gain curve.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ B -->
+    <section class="opt">
+      <div class="stage">
+        <div class="pnl" style="width:336px">
+          <div class="pnl-hd">
+            <span class="pnl-name">Slowform</span>
+            <span class="pnl-sp"></span>
+            <span class="chip">43 ms</span>
+            <span class="pwr"></span>
+          </div>
+
+          <div class="stg">
+            <div class="stg-hd">
+              <span class="dot"></span>
+              <span class="t">1 &middot; resample</span>
+              <span class="s">0.8409&times;</span>
+            </div>
+            <svg width="308" height="32" viewBox="0 0 308 32" style="margin-top:7px;display:block">
+              <line x1="0" y1="11" x2="308" y2="11" stroke="#2a2f3b" stroke-width="1"/>
+              <line x1="0" y1="25" x2="308" y2="25" stroke="#2a2f3b" stroke-width="1"/>
+              <g fill="#5bc0d0">
+                <rect x="18" y="7" width="2" height="8"/><rect x="76" y="7" width="2" height="8"/>
+                <rect x="134" y="7" width="2" height="8"/><rect x="192" y="7" width="2" height="8"/>
+                <rect x="250" y="7" width="2" height="8"/>
+              </g>
+              <g fill="#f2a54a">
+                <rect x="18" y="21" width="2" height="8"/><rect x="87" y="21" width="2" height="8"/>
+                <rect x="156" y="21" width="2" height="8"/><rect x="225" y="21" width="2" height="8"/>
+                <rect x="294" y="21" width="2" height="8"/>
+              </g>
+            </svg>
+            <div class="plotkey" style="position:static;margin-top:5px">
+              <span style="color:#5bc0d0"><i style="background:#5bc0d0"></i>original beats</span>
+              <span style="color:#f2a54a"><i style="background:#f2a54a"></i>slowed beats</span>
+            </div>
+            <div class="ctl" style="margin-top:4px">
+              <span class="nm">interval</span>
+              <span class="seg"><span>&minus;1</span><span>&minus;2</span><span class="sel">&minus;3</span><span>&minus;4</span><span>&minus;5</span></span>
+              <span class="v">84.09%</span>
+            </div>
+          </div>
+
+          <div class="flow"></div>
+
+          <div class="stg">
+            <div class="stg-hd">
+              <span class="dot"></span>
+              <span class="t">2 &middot; envelope warp<span class="q on" style="margin-left:5px">?</span></span>
+              <span class="s">+3 st</span>
+            </div>
+
+            <div class="tip">
+              Pitch dropped three semitones and took the vocal tract down with
+              it. This stage lifts the <b>spectral envelope</b> back up by the
+              same interval, leaving every harmonic exactly where the resample
+              put it. Phase is never touched.
+            </div>
+
+            <div class="ctl">
+              <span class="nm">amount</span>
+              <span class="trk"><i style="width:100%"></i><b style="left:100%"></b></span>
+              <span class="v">100%</span>
+            </div>
+            <div class="ctl">
+              <span class="nm">envelope res</span>
+              <span class="trk"><i style="width:26%"></i><b style="left:26%"></b></span>
+              <span class="v">500 Hz</span>
+            </div>
+            <div class="ctl">
+              <span class="nm">protect bass below</span>
+              <span class="trk zero"><i style="width:0"></i><b style="left:0"></b></span>
+              <span class="v">off</span>
+            </div>
+            <div class="ctl">
+              <span class="nm">ease off on hits</span>
+              <span class="trk zero"><i style="width:0"></i><b style="left:0"></b></span>
+              <span class="v">0%</span>
+            </div>
+            <div class="ctl">
+              <span class="nm">apply to</span>
+              <span class="seg"><span class="sel">both channels</span><span>centre only</span></span>
+              <span class="v">&nbsp;</span>
+            </div>
+          </div>
+
+          <div class="flow"></div>
+
+          <div class="stg">
+            <div class="stg-hd">
+              <span class="dot idle"></span>
+              <span class="t">3 &middot; output</span>
+              <span class="s">0.0 dB</span>
+            </div>
+            <div class="ctl">
+              <span class="nm">match loudness to dry</span>
+              <span class="meter" style="width:112px"><i style="width:52%"></i></span>
+              <span class="v">on</span>
+            </div>
+            <div class="ctl off">
+              <span class="nm">ceiling</span>
+              <span class="meter" style="width:112px"><i style="width:0"></i></span>
+              <span class="v">idle</span>
+            </div>
+          </div>
+
+          <div class="cmp">HOLD ALT+A FOR SLOWED ONLY</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow">Direction B</div>
+        <h2>Chain</h2>
+        <p class="who">For making it obvious what happens, and in what order.</p>
+        <p>
+          Laid out as the actual signal path rather than a flat list, so each
+          control sits inside the stage it belongs to. The numbering is real
+          here: audio genuinely passes through these three stages in sequence,
+          and the crossover only makes sense as something that happens inside
+          stage two.
+        </p>
+        <ul>
+          <li>The ruler in stage one shows the two grids side by side, which explains the interval faster than <code>0.8409</code> ever will.</li>
+          <li>Controls are renamed to what they do rather than how they work. "Protect bass below" and "ease off on hits" need no tooltip at all.</li>
+          <li>Stage three finally makes the loudness matcher and the ceiling visible, so you can see when something other than the warp is touching the sound.</li>
+          <li>The idle dot on stage three tells you nothing is being corrected right now, which is the state you want during a listening test.</li>
+        </ul>
+        <div class="cost">
+          <b>Build cost: lowest of the three.</b> No new DSP work. Every value shown
+          is already sent to the panel today, including the limiter gain. This is
+          a reorganisation plus two small SVGs.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ C -->
+    <section class="opt">
+      <div class="stage">
+        <div class="pnl" style="width:300px">
+          <div class="pnl-hd">
+            <span class="pnl-name">Slowform</span>
+            <span class="pnl-sp"></span>
+            <span class="pwr"></span>
+          </div>
+
+          <div class="ab">
+            <div class="on">
+              <div class="st">warped</div>
+              <div class="d">&minus;3 st &middot; +3 st</div>
+            </div>
+            <div>
+              <div class="st">slowed only</div>
+              <div class="d">hold alt+A</div>
+            </div>
+          </div>
+
+          <div class="tip">
+            Both sides play at <b>84.09%</b>. The only difference is the envelope.
+            Levels are matched and the delay is identical, so anything you hear
+            is the effect itself.
+          </div>
+
+          <div style="display:flex;align-items:flex-end;gap:10px;margin:14px 0 2px">
+            <div>
+              <div class="lbl">interval</div>
+              <div class="big" style="margin-top:5px">&minus;3<small> st</small></div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="text-align:right">
+              <div class="lbl">effect strength</div>
+              <div class="big" style="margin-top:5px">6.2<small> dB</small></div>
+            </div>
+          </div>
+
+          <div class="meter" style="margin-top:10px"><i style="width:72%"></i></div>
+
+          <div class="disc">
+            <span>&#9656;</span><span class="lbl" style="letter-spacing:.1em">tune</span>
+          </div>
+
+          <div class="ctl">
+            <span class="nm">amount</span>
+            <span class="trk"><i style="width:100%"></i><b style="left:100%"></b></span>
+            <span class="v">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow">Direction C</div>
+        <h2>Listening</h2>
+        <p class="who">For judging the sound rather than operating the tool.</p>
+        <p>
+          The two-state bar is the hero, because the question you kept hitting
+          was not which value a slider is on. It was which of the two things you
+          are currently hearing. That state is now the largest element on the
+          panel, and it lights up as you hold the key.
+        </p>
+        <ul>
+          <li>Everything except the interval and one strength figure is collapsed behind <b>tune</b>. You open it deliberately.</li>
+          <li>The tooltip states the thing that is easy to get wrong: both sides are slowed, so the comparison is the warp alone.</li>
+          <li>Fits the existing 296px, and stops competing with the video.</li>
+        </ul>
+        <div class="cost">
+          <b>Build cost: low.</b> Mostly a reorganisation of what exists. The one
+          new value is "effect strength", which is the same running statistic
+          direction A calls depth.
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="verdict">
+    <h2>Where I would land</h2>
+    <p>
+      <strong>B for the structure, with A's readout strip dropped into stage
+      three.</strong> B fixes the real problem, which is that a flat list of six
+      sliders gives no clue that three of them only make sense inside one stage
+      of the chain, and it costs nothing to build. The one genuinely new thing
+      worth paying for is depth and wobble as live numbers, because that pair
+      turns the envelope-res question from a matter of taste into something you
+      can read off. The full gain plot from A is the most fun and the least
+      necessary; it is worth doing once B is in and you know what you actually
+      look at.
+    </p>
+  </div>
+</div>
+
+<script>
+  // Real frame from demo-material.wav, envelope resolution 500 Hz, +3 st.
+  const F = [60,64,68,72,77,82,87,93,99,105,112,119,127,135,144,153,163,173,185,196,209,223,237,252,268,286,304,324,344,367,390,415,442,471,501,533,568,604,643,684,728,775,825,878,935,995,1059,1128,1200,1277,1360,1447,1541,1640,1745,1858,1977,2105,2240,2385,2538,2702,2876,3061,3258,3468,3691,3929,4182,4451,4738,5043,5368,5713,6081,6473,6890,7333,7806,8308,8843,9413,10019,10664,11351,12082,12860,13689,14570,15508];
+  const ENV = [9.4,9.2,8.9,8.5,8.1,7.6,7.2,6.6,6,5.3,4.6,3.8,2.9,2,0.9,-0.2,-1.3,-2.5,-3.8,-5,-6.3,-7.4,-8.5,-9.4,-10.1,-10.5,-10.5,-9.9,-8.9,-7.2,-4.9,-2,1.4,5.1,9,12.7,15.8,17.9,18.8,18.2,16.2,13,9.1,4.8,0.5,-3.8,-8.3,-12.7,-16.2,-17,-13.7,-6.6,1.3,6.2,7.3,7.7,9.5,9.4,4.3,-0.6,-0.3,0.1,-0.8,-0.7,-5.7,-12.3,-20.6,-28.4,-30.7,-32.8,-35.3,-39,-36.9,-33.3,-31.7,-31.5,-31.7,-31.6,-31.9,-32.2,-33,-35.1,-40.1,-36.5,-34.9,-33.8,-34.2,-35.1,-38,-41.3];
+  const WRP = [10,9.8,9.6,9.4,9,8.7,8.4,8,7.5,7,6.5,5.9,5.2,4.4,3.6,2.7,1.7,0.7,-0.4,-1.6,-2.8,-4,-5.3,-6.5,-7.7,-8.7,-9.6,-10.2,-10.4,-10.3,-9.7,-8.5,-6.8,-4.3,-1.3,2.2,6,9.9,13.4,16.3,18.3,18.8,17.8,15.6,12.2,8.1,3.9,-0.4,-4.8,-9.3,-13.6,-16.6,-16.6,-12.4,-4.8,2.7,6.7,7.3,8,9.8,8.6,2.9,-0.9,0,-0.2,-0.7,-1.3,-7.4,-13.7,-22.9,-29,-31.5,-32.8,-36.4,-39.4,-35.1,-33.6,-31.8,-31,-31.1,-31.3,-31.6,-32.1,-32.8,-35.6,-40,-36.3,-34.2,-34.1,-33.9];
+
+  const cv = document.getElementById('gainplot');
+  if (cv && cv.getContext) {
+    const g = cv.getContext('2d');
+    const W = cv.width, H = cv.height, PAD = 6;
+    const lo = Math.log(F[0]), hi = Math.log(F[F.length - 1]);
+    const X = f => PAD + ((Math.log(f) - lo) / (hi - lo)) * (W - PAD * 2);
+    const DB_LO = -44, DB_HI = 22;
+    const Y = d => PAD + (1 - (Math.min(DB_HI, Math.max(DB_LO, d)) - DB_LO) / (DB_HI - DB_LO)) * (H - PAD * 2);
+
+    g.clearRect(0, 0, W, H);
+
+    g.strokeStyle = '#242835';
+    g.lineWidth = 1;
+    [100, 1000, 10000].forEach(f => {
+      g.beginPath(); g.moveTo(X(f), PAD); g.lineTo(X(f), H - PAD); g.stroke();
+    });
+
+    const path = arr => {
+      g.beginPath();
+      arr.forEach((d, i) => (i ? g.lineTo(X(F[i]), Y(d)) : g.moveTo(X(F[i]), Y(d))));
+    };
+
+    // amber fill between the two envelopes: this is the applied gain
+    g.beginPath();
+    WRP.forEach((d, i) => (i ? g.lineTo(X(F[i]), Y(d)) : g.moveTo(X(F[i]), Y(d))));
+    for (let i = ENV.length - 1; i >= 0; i--) g.lineTo(X(F[i]), Y(ENV[i]));
+    g.closePath();
+    g.fillStyle = 'rgba(242,165,74,.20)';
+    g.fill();
+
+    g.lineJoin = 'round';
+    path(ENV); g.strokeStyle = '#5bc0d0'; g.lineWidth = 2; g.stroke();
+    path(WRP); g.strokeStyle = '#f2a54a'; g.lineWidth = 2.6; g.stroke();
+
+    g.fillStyle = '#5a6172';
+    g.font = '600 15px ui-sans-serif, system-ui, sans-serif';
+    g.fillText('100', X(100) + 4, H - 9);
+    g.fillText('1k', X(1000) + 4, H - 9);
+    g.fillText('10k', X(10000) + 4, H - 9);
+  }
+</script>

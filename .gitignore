@@ -1,0 +1,14 @@
+# Rust build output
+target/
+
+# Rendered audio. Everything here is reproducible from tools/testsig.js
+# and tools/render.js.
+*.wav
+
+# Build artifact, produced by build.ps1 from src/. Un-ignore this if you ever
+# want a clone to be loadable in Chrome without a Rust toolchain.
+extension/slowform.wasm
+
+# Intermediate curve dumps from tools/envsnap.js. The mockups embed their own
+# copy of the data, so these are not needed to render anything.
+design/snap*.json

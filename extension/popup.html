@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Slowform</title>
+<style>
+  body {
+    margin: 0; padding: 14px; width: 250px;
+    font: 12px/1.5 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    color: #e8e8ea; background: #16171a;
+  }
+  h1 { font-size: 13px; margin: 0 0 10px; letter-spacing: .02em; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
+  .row span { flex: 1; color: #b9bcc4; }
+  button {
+    font: inherit; color: #e8e8ea; background: #24262b; border: 1px solid #383b42;
+    border-radius: 6px; padding: 3px 10px; cursor: pointer;
+  }
+  button.on { background: #3d6b4a; border-color: #4e8a5f; }
+  select { font: inherit; background: #24262b; color: #e8e8ea; border: 1px solid #383b42; border-radius: 6px; padding: 2px 4px; }
+  .keys { margin-top: 12px; padding-top: 10px; border-top: 1px solid #292b31; color: #8a8d96; font-size: 11px; }
+  .keys b { color: #b9bcc4; font-weight: 600; }
+  code { color: #f0f0f2; }
+</style>
+<h1>Slowform</h1>
+<div class="row"><span>enabled</span><button id="enabled">on</button></div>
+<div class="row"><span>interval</span><select id="semitones"></select><code id="rate"></code></div>
+<div class="keys">
+  Full controls live in the on-page panel.<br>
+  <b>alt+S</b> panel &nbsp; <b>alt+X</b> on/off &nbsp; <b>alt+A</b> hold to compare
+</div>
+<script src="popup.js"></script>

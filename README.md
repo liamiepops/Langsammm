@@ -1,0 +1,236 @@
+# Slowform
+
+Plays audio slowed by three semitones and warps the spectral envelope back up
+by the same interval, so the tempo and pitch drop while the timbre stays where
+it was.
+
+Three semitones down is a playback rate of 2^(-3/12) = **84.09%**. Two
+semitones would be 89.09%. The interval is selectable from 1 to 7 in the panel
+and everything else is derived from it, so the rate and the warp ratio cannot
+disagree.
+
+## How it works
+
+The browser does the resample. Setting `playbackRate` with `preservesPitch`
+off drops tempo, pitch and spectral envelope together by the same factor. The
+worklet then puts the envelope back.
+
+Because duration and pitch are never altered independently, there is no time
+stretching anywhere in the chain. No phase vocoder, no phase locking, no
+transient smearing from time-scale modification. The whole effect collapses to
+a per-bin real gain applied to the original spectrum with the phases left
+alone:
+
+```
+G[k] = ( E'[k] / E[k] ) ^ e[k]
+```
+
+`E` is the cepstrally smoothed log envelope, `E'[k] = E[k / rho]` is that
+envelope moved up by `rho = 2^(3/12)`, and `e[k]` in [0, 1] carries the wet
+amount, the crossover taper and the transient relaxation. Setting `e` to zero
+makes the gain exactly 1, and since the analysis and synthesis windows form a
+perfect-reconstruction Hann WOLA pair, the dry path is a sample-exact delay
+line. That is what makes the A/B honest: nothing changes but the effect.
+
+## The four knobs you asked for
+
+| Knob | What it does |
+|---|---|
+| **amount** | Exponent on the whole gain curve. 100% is the full three-semitone warp. |
+| **crossover** | Frequency below which the warp is turned off, with a raised-cosine taper from fc/2 to fc. 0 disables it. Stops the low end being translated upward and thinned. |
+| **transient relax** | Half-wave rectified spectral flux, normalised by frame energy and compared against its own running mean, relaxes the exponent toward 0 on transient frames. |
+| **stereo M/S** | Switches the two engines from L/R to mid/side, with a separate amount for side. Centre-panned vocals live in mid, so this is a cheap stand-in for source separation. |
+
+There is a fifth worth having: **envelope res**, the cepstral lifter cutoff
+expressed in Hz. Lower values track formants more tightly and pick up more
+harmonic structure. Higher values give a smoother envelope that moves less.
+Default 500 Hz.
+
+## Tuning notes
+
+Measured on `demo-material.wav` (f0 140 Hz, 117.6 Hz once slowed) with the
+loudness matcher and ceiling off, so nothing is masking the effect.
+`tools/gainwobble.js` reports how hard the warp is working and how steady the
+gain it applies is.
+
+| env_res | envelope shift | gain depth | frame-to-frame wobble |
+|---|---|---|---|
+| 1500 Hz | 0.23 st | 3.92 dB | 1.98 dB |
+| 1000 Hz | | 5.54 dB | 2.50 dB |
+| **500 Hz** | **3.32 st** | **6.19 dB** | **2.96 dB** |
+| 300 Hz | 3.13 st | 6.12 dB | 3.24 dB |
+| 200 Hz | 3.09 st | 6.09 dB | 3.49 dB |
+| 150 Hz | 3.05 st | 6.10 dB | 3.56 dB |
+| 100 Hz | 2.61 st | 6.00 dB | 4.39 dB |
+
+Depth saturates at about 6.1 dB by 500 Hz and goes no higher, while wobble
+keeps climbing. Everything below 500 is therefore paid for and not received.
+Useful range is roughly 400 to 800.
+
+The panel shows the same two figures live, computed inside the DSP over the
+same 200 Hz to 6 kHz band. It reads about 0.9 dB higher on depth and 0.8 dB
+lower on wobble than the table above, because the panel measures the gain curve
+the warp intends while `gainwobble.js` measures the ratio of two STFT
+magnitudes after reconstruction, which picks up window leakage. The trends
+agree exactly, so compare readings against each other rather than across the
+two tools. Both settle in about a second after a change.
+
+At 1500 Hz the lifter keeps only 32 cepstral coefficients, so the envelope
+cannot resolve anything narrower than a formant group. Warping it produces a
+broadband tilt rather than a translation of formant features, which is why the
+gain depth is still 3.9 dB while the formants themselves move only 0.23 st.
+
+The crossover is close to a no-op at the default env_res, because the warp
+barely acts down there in the first place. Its effect on the 60 to 120 Hz band
+is 13.9 dB below the signal at env_res 500 and 39.6 dB below at 1500, against
+1.9 dB below at env_res 150. It becomes a real control only at low env_res, or
+if you push it above 300 Hz.
+
+## Build
+
+```bash
+pwsh build.ps1
+```
+
+Runs the Rust tests, builds `wasm32-unknown-unknown`, copies the module into
+`extension/`. About 40 KB, no imports, no wasm-bindgen. That last part matters:
+`AudioWorkletGlobalScope` in Chrome has no `TextDecoder`, so the usual bindgen
+glue is a liability there.
+
+## Listening offline
+
+Faster than reloading a browser tab, and it lets you compare two files in an
+editor instead of from memory.
+
+```bash
+node tools/testsig.js material test-material.wav
+node tools/render.js test-material.wav out-dry.wav --amount 0
+node tools/render.js test-material.wav out-wet.wav --amount 1
+node tools/render.js test-material.wav out-ms.wav --stereo ms --side 0.3 --crossover 150 --transient 0.7
+```
+
+Both renders come out the same length and sample aligned, so you can null them
+against each other. Options: `--semitones --amount --stereo lr|ms --side
+--crossover --transient --envres --fft --noloud --float --ceiling`.
+
+To hear the effect with nothing at all holding the peaks down:
+
+```bash
+node tools/render.js in.wav out.wav --amount 1 --ceiling 0 --float
+```
+
+`node tools/analyse.js a.wav b.wav` reports the envelope shift between two
+files in semitones and confirms the harmonic spacing did not move. Read its
+calibration note before trusting the magnitude.
+
+## Installing the extension
+
+1. Open `chrome://extensions`
+2. Turn on Developer mode
+3. Load unpacked, and pick the `extension` folder
+
+Then open YouTube. Panel hotkeys: **alt+S** show or hide, **alt+X** on or off,
+**alt+A** hold to hear the dry slowed version.
+
+The panel plots the spectral envelope before and after the gain it is applying,
+updated at 15 Hz. Cyan is the original envelope, amber is where the warp has
+moved it, and the filled area between them is the gain. Under it sit four live
+figures: **depth** and **wobble** as described under tuning, **ceiling** showing
+any reduction the limiter is making, and **delay** for the current window size.
+Every control carries a **?** that opens an explanation of what it does.
+
+Snapshots are only sent while the panel is open, so a closed panel costs
+nothing.
+
+To work on the panel without reloading the extension, open
+`design/panel-preview.html`. It loads the real `extension/page.js` with the
+audio API stubbed and feeds it a recorded analysis frame, so the panel is built
+by the shipping code rather than a copy.
+
+## What is verified
+
+Rust tests (`cargo test`):
+
+* `dry_path_reconstructs` confirms amount 0 is a pure delay of exactly one
+  window, to within 1e-3.
+* `envelope_moves_up` confirms the spectral centroid of a synthetic voiced
+  signal moves by 2^(3/12) to within 6%.
+* `crossover_protects_low_band` confirms an 80 Hz tone survives a 1000 Hz
+  crossover with under 5% level change.
+* `loudness_match_does_not_boost_at_startup` covers a bug found during
+  bring-up. The output is silent for one window while the input is already
+  loud, so an EMA started from zero drove the matcher straight to its +6 dB
+  ceiling and took a second to recover. Everything, including the dry path,
+  came out 5 dB hot.
+* `output_respects_ceiling` covers the second one. Warping the envelope upward
+  raised crest factor by about 1.3 dB on a signal with a strong low sine, and
+  the first version of the limiter ramped its reduction in across the block,
+  so the peak that triggered it escaped before the gain arrived.
+* Two FFT tests.
+
+`node tools/worklet-harness.js` runs the real `extension/worklet.js` under a
+stubbed `AudioWorkletGlobalScope` and checks it bit for bit against direct wasm
+calls. It currently reports zero deviation over 750 blocks. This covers the
+parameter index layout, the views into wasm memory and the block handling,
+which is where the glue bugs would be.
+
+End to end on rendered files, using an unprocessed reference with formants at
+800/2300/3400 Hz and f0 at 140 Hz:
+
+* Playback ratio measured 0.8407 against a target of 0.8409.
+* The warp on its own leaves the harmonic spacing at a ratio of exactly 1.0000.
+* The warped render's envelope sits within 0.3 st of the unslowed original,
+  while the dry render sits well below it.
+
+## Known limits
+
+Spotify, Apple Music and Tidal web players decrypt through EME.
+`createMediaElementSource` returns silence for protected media by design, and
+working around that is a DMCA 1201 problem, so those sites are out of scope.
+YouTube and YouTube Music play through MSE from a blob URL and are fine.
+
+Bandcamp serves a direct cross-origin `<audio src>`, which taints the element
+and yields silence. The panel detects this case and says so rather than leaving
+you wondering.
+
+The worklet adds one window of delay, 42.7 ms at 2048 and 48 kHz. For
+audio-only that is irrelevant. On video it puts audio behind picture by about
+that much, which is inside the usual tolerance but audible to some people on
+close-ups. Drop the window to 1024 for video.
+
+While the effect is on, the playbackRate is re-asserted on every `ratechange`,
+so YouTube's own speed menu will not stick. Turn Slowform off to use it.
+
+Switching between L/R and M/S mid-playback puts one window of mismatched
+samples through the analysis buffers and clicks once.
+
+The full warp raises peak level even with RMS matched, by about 1.3 dB on the
+synthetic material file. A ceiling at 0.99 catches that, and the panel says so
+whenever it is working, so you can tell whether you are hearing the effect or
+the limiter. In the browser it is fixed on, because the destination clips
+regardless. Offline you can set `--ceiling 0`.
+
+Loading the worklet module from a `chrome-extension:` URL and compiling the
+wasm inside the worklet both work on YouTube under its CSP, confirmed on Chrome
+2026-07-26. If another site refuses, the panel shows the error, and the fix is
+to compile in the content script and hand over a `WebAssembly.Module`.
+
+## Layout
+
+```
+src/fft.rs               radix-2 complex FFT, no dependencies
+src/stft.rs              envelope warp, transient detection, loudness match
+src/lib.rs               C ABI exports for wasm
+extension/bridge.js      isolated world: injects page.js, couriers wasm and settings
+extension/page.js        page world: media elements, audio graph, panel
+extension/worklet.js     AudioWorklet host for the wasm
+tools/render.js          offline renderer
+tools/analyse.js         envelope shift and pitch measurement
+tools/testsig.js         test signal generator
+tools/gainwobble.js      how hard the warp works and how steady it is
+tools/banddiff.js        octave-band difference between two renders
+tools/envsnap.js         dumps one frame's envelope and gain curve as JSON
+tools/worklet-harness.js runs worklet.js under a stubbed worklet scope
+design/panel-preview.html  drives the real panel with the audio stubbed
+design/panel-mockups.html  the three directions the panel was chosen from
+```
