@@ -12,3 +12,10 @@ extension/slowform.wasm
 # Intermediate curve dumps from tools/envsnap.js. The mockups embed their own
 # copy of the data, so these are not needed to render anything.
 design/snap*.json
+
+# Icon comparison output, all reproducible from tools/icons.js,
+# tools/icon-sheet.js and tools/icon-compare.js. The shipped mark in
+# extension/icons is tracked; these are just the workings.
+design/icon-candidates/
+design/icon-candidates.html
+design/icon-contact.png

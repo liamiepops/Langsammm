@@ -322,27 +322,31 @@
     return e;
   }
 
-  // The mark, matching tools/icons.js: one arch, and the same arch lifted.
-  // Built with createElementNS rather than innerHTML because YouTube enforces
-  // Trusted Types and would refuse the markup.
+  // The mark, matching tools/icons.js: two beats, then the same two spread
+  // apart. Built with createElementNS rather than innerHTML because YouTube
+  // enforces Trusted Types and would refuse the markup.
   function markSvg(height) {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '1.6 6.1 19.8 14.8');
+    svg.setAttribute('viewBox', '1.5 3 23 18');
     svg.setAttribute('height', String(height));
-    svg.setAttribute('width', String(Math.round((height * 19.8) / 14.8)));
+    svg.setAttribute('width', String(Math.round((height * 23) / 18)));
     svg.setAttribute('aria-hidden', 'true');
-    const arc = (d, colour) => {
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', d);
-      p.setAttribute('fill', 'none');
-      p.setAttribute('stroke', colour);
-      p.setAttribute('stroke-width', '2.8');
-      p.setAttribute('stroke-linecap', 'round');
-      return p;
+    const tick = (x, colour) => {
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', String(x));
+      l.setAttribute('x2', String(x));
+      l.setAttribute('y1', '4.5');
+      l.setAttribute('y2', '19.5');
+      l.setAttribute('stroke', colour);
+      l.setAttribute('stroke-width', '3');
+      l.setAttribute('stroke-linecap', 'round');
+      return l;
     };
-    svg.append(arc('M3 19.5A5.5 5.5 0 0 1 14 19.5', '#5bc0d0'));
-    svg.append(arc('M9 13A5.5 5.5 0 0 1 20 13', '#f2a54a'));
+    svg.append(tick(3, '#5bc0d0'));
+    svg.append(tick(7, '#5bc0d0'));
+    svg.append(tick(15, '#f2a54a'));
+    svg.append(tick(23, '#f2a54a'));
     return svg;
   }
 

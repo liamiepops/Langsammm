@@ -88,23 +88,40 @@ if you push it above 300 Hz.
 
 ## The mark
 
-One arch, and the same arch lifted. Cyan is where the resample left the
-spectral envelope, amber is where the warp puts it back, which is the same
-colour language the panel uses throughout. It is the product in two strokes and
-it still reads at 16 px.
+Two beats, then the same two spread twice as far apart. It shows the resample
+rather than the warp, in the same colour language the panel uses: cyan is
+before, amber is after.
 
-`tools/icons.js` cuts the PNG set. The geometry lives in one table at the top
-of that file and the mark is centred from its own bounding box, so changing the
-shape does not silently shift the composition. PNGs are encoded with zlib
-directly, so there is no image library to install.
+The gap ratio is 2:1 and the real one is 2^(3/12) = 1.19. A 19% difference is
+invisible at any icon size, so it is exaggerated on purpose.
+
+Both sides carry the same number of ticks, which matters. An earlier cut had
+three on the left and two on the right, and at 16 px the three merged into a
+solid slab, so the mark changed character between 16 and 32. With equal counts,
+spacing is the only variable and there is nothing else for the eye to blame the
+difference on.
+
+Chrome's guidance shapes the rest. Artwork spans about 75% of the canvas with
+the remainder transparent, and there is no tile or edge of its own because the
+browser may add one. Small sizes are allowed slightly more of the canvas, or
+the mark shrinks into nothing.
 
 ```bash
-node tools/icons.js
+node tools/icons.js               # cut the chosen mark into extension/icons
+node tools/icons.js --candidates  # cut every concept for comparison
+node tools/icon-sheet.js          # contact sheet, all concepts, all sizes
+node tools/icon-compare.js        # the comparison page, with data URIs inlined
 ```
 
-The same two arcs are drawn as inline SVG in the panel header and the popup.
-They are built with `createElementNS` rather than markup, because YouTube
-enforces Trusted Types and would reject an `innerHTML` assignment.
+Geometry for every concept lives in one table at the top of `tools/icons.js`,
+and each mark is centred from its own bounding box, so editing a shape cannot
+quietly unbalance the composition. PNGs are encoded with zlib directly, so
+there is no image library to install. `design/icon-candidates.html` is the
+record of what was compared and why.
+
+The same four ticks are drawn as inline SVG in the panel header and the popup.
+The panel builds them with `createElementNS` rather than markup, because
+YouTube enforces Trusted Types and would reject an `innerHTML` assignment.
 
 ## Build
 
