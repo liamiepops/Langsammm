@@ -322,6 +322,30 @@
     return e;
   }
 
+  // The mark, matching tools/icons.js: one arch, and the same arch lifted.
+  // Built with createElementNS rather than innerHTML because YouTube enforces
+  // Trusted Types and would refuse the markup.
+  function markSvg(height) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '1.6 6.1 19.8 14.8');
+    svg.setAttribute('height', String(height));
+    svg.setAttribute('width', String(Math.round((height * 19.8) / 14.8)));
+    svg.setAttribute('aria-hidden', 'true');
+    const arc = (d, colour) => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', colour);
+      p.setAttribute('stroke-width', '2.8');
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    svg.append(arc('M3 19.5A5.5 5.5 0 0 1 14 19.5', '#5bc0d0'));
+    svg.append(arc('M9 13A5.5 5.5 0 0 1 20 13', '#f2a54a'));
+    return svg;
+  }
+
   // Amber always means the warped signal, cyan always means the original.
   const CSS = `
 :host { all: initial; }
@@ -336,8 +360,9 @@
 .wrap.closed { display: none; }
 .wrap * { box-sizing: border-box; }
 
-.hd { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.nm { font-weight: 640; letter-spacing: .015em; }
+.hd { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+.hd svg { display: block; flex: none; }
+.nm { font-weight: 640; letter-spacing: .015em; margin-right: 1px; }
 .sp { flex: 1; }
 
 .chip {
@@ -769,6 +794,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       h(
         'div',
         { class: 'hd' },
+        markSvg(15),
         h('span', { class: 'nm' }, 'Slowform'),
         chip,
         h('span', { class: 'sp' }),

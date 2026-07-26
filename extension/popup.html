@@ -7,7 +7,11 @@
     font: 12px/1.5 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
     color: #e8e8ea; background: #16171a;
   }
-  h1 { font-size: 13px; margin: 0 0 10px; letter-spacing: .02em; }
+  h1 {
+    font-size: 13px; margin: 0 0 12px; letter-spacing: .015em; font-weight: 640;
+    display: flex; align-items: center; gap: 7px;
+  }
+  h1 svg { display: block; flex: none; }
   .row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
   .row span { flex: 1; color: #b9bcc4; }
   button {
@@ -20,7 +24,13 @@
   .keys b { color: #b9bcc4; font-weight: 600; }
   code { color: #f0f0f2; }
 </style>
-<h1>Slowform</h1>
+<h1>
+  <svg viewBox="1.6 6.1 19.8 14.8" height="15" width="20" aria-hidden="true">
+    <path d="M3 19.5A5.5 5.5 0 0 1 14 19.5" fill="none" stroke="#5bc0d0" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M9 13A5.5 5.5 0 0 1 20 13" fill="none" stroke="#f2a54a" stroke-width="2.8" stroke-linecap="round"/>
+  </svg>
+  Slowform
+</h1>
 <div class="row"><span>enabled</span><button id="enabled">on</button></div>
 <div class="row"><span>interval</span><select id="semitones"></select><code id="rate"></code></div>
 <div class="keys">
