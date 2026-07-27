@@ -41,10 +41,17 @@ line. That is what makes the A/B honest: nothing changes but the effect.
 | **transient relax** | Half-wave rectified spectral flux, normalised by frame energy and compared against its own running mean, relaxes the exponent toward 0 on transient frames. |
 | **stereo M/S** | Switches the two engines from L/R to mid/side, with a separate amount for side. Centre-panned vocals live in mid, so this is a cheap stand-in for source separation. |
 
-There is a fifth worth having: **envelope res**, the cepstral lifter cutoff
-expressed in Hz. Lower values track formants more tightly and pick up more
-harmonic structure. Higher values give a smoother envelope that moves less.
-Default 500 Hz.
+There is a fifth worth having: **envelope width**, the cepstral lifter cutoff
+expressed in Hz, being the narrowest spectral feature the envelope keeps.
+Default 500 Hz, range 50 to 1500.
+
+All four of the knobs above are factors of one exponent. `src/stft.rs` computes
+`expo = amount × taper[k] × relax`, so they differ only in what they vary over:
+amount is constant, the crossover taper varies with frequency, and the
+transient relaxation varies with time. That makes **transient relax an
+automatic, signal-gated version of amount**, with the polarity reversed. At
+100% a fully transient frame sits momentarily at amount 0, and on material with
+no transients it does nothing at any setting.
 
 ## Tuning notes
 
@@ -64,8 +71,35 @@ gain it applies is.
 | 100 Hz | 2.61 st | 6.00 dB | 4.39 dB |
 
 Depth saturates at about 6.1 dB by 500 Hz and goes no higher, while wobble
-keeps climbing. Everything below 500 is therefore paid for and not received.
-Useful range is roughly 400 to 800.
+keeps climbing. For a faithful formant shift the useful range is roughly 400 to
+800.
+
+Below that it stops being a fidelity question and becomes an effect. The gain
+curve changes character at a threshold that turns out to be simple: the lifter
+keeps `q = sr / width` cepstral coefficients and the pitch period sits at
+quefrency `sr / f0`, so the envelope begins absorbing harmonic structure once
+**width falls below a source's fundamental**. Past that point the warp is
+shifting a harmonic comb off its own harmonics, which is heard as shimmer.
+
+Measured on the same file, whose slowed fundamental is 117.7 Hz:
+
+| width | q | gain rms | range | slope reversals |
+|---|---|---|---|---|
+| 100 Hz | 480 | 19.65 dB | −45.8 to +48.4 | 54 |
+| 150 Hz | 320 | 8.76 dB | −15.1 to +21.5 | 19 |
+| 500 Hz | 96 | 8.66 dB | −19.3 to +21.7 | 14 |
+| 1000 Hz | 48 | 7.11 dB | −13.2 to +22.1 | 9 |
+| 1500 Hz | 32 | 5.12 dB | −5.0 to +14.9 | 4 |
+| 4000 Hz | 12 | 4.36 dB | −5.3 to +12.1 | 3 |
+
+The jump between 150 and 100 is that threshold being crossed. The threshold is
+per source, so on a mix a setting of 150 combs a vocal while leaving a bass line
+alone.
+
+Widening does not approach bypass, which is worth knowing. At 1500 Hz the
+formants move only 0.23 st, so the intended effect has gone, but 5 dB rms of
+smooth broadband gain remains. True bypass is amount 0, which reconstructs the
+input exactly.
 
 The panel shows the same two figures live, computed inside the DSP over the
 same 200 Hz to 6 kHz band. It reads about 0.9 dB higher on depth and 0.8 dB

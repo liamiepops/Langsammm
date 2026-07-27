@@ -505,18 +505,22 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       'full interval. Lower values land part way, and the amber curve above ' +
       'moves with it.',
     envResHz:
-      'How much detail the envelope is allowed to contain. Watch the two ' +
-      'numbers above as you drag: past a point depth stops rising while ' +
-      'wobble keeps climbing, and that extra wobble is what you hear as ' +
-      'shimmer.',
+      'The narrowest spectral feature the envelope is allowed to keep. Widen ' +
+      'it and the envelope smooths out, so the warp becomes a broad tilt and ' +
+      'the formants stop moving. Narrow it past the fundamental of a sound ' +
+      'and the envelope starts tracking that sound’s harmonics, and shifting ' +
+      'a harmonic comb off its own harmonics is the shimmer you hear at the ' +
+      'bottom of the range. Watch depth and wobble as you drag.',
     crossoverHz:
       'Turns the warp off below this frequency, tapering in from half of it. ' +
-      'At the default envelope resolution the warp barely acts down there ' +
+      'At the default envelope width the warp barely acts down there ' +
       'anyway, so expect little to change until you go above 300 Hz.',
     transient:
       'Eases the warp off on frames where spectral flux jumps above its ' +
-      'running mean, which is most drum hits. It gives back some of the ' +
-      'effect on those frames in exchange for cleaner transients.',
+      'running mean, which is most drum hits. It scales the same exponent ' +
+      'that amount does, so at 100% a fully transient frame sits momentarily ' +
+      'at amount 0. On material with no transients it does nothing at any ' +
+      'setting.',
     stereoMs:
       'M/S runs the two engines on mid and side rather than left and right. ' +
       'Centre-panned vocals live in mid, so this is a cheap stand-in for ' +
@@ -871,7 +875,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       h('div', { class: 'rule' }),
       semRow,
       slider('midWet', 'amount', 0, 1, 0.01, pct),
-      slider('envResHz', 'envelope res', 150, 1500, 25, (v) => Math.round(v) + ' Hz'),
+      slider('envResHz', 'envelope width', 50, 1500, 10, (v) => Math.round(v) + ' Hz'),
       slider('crossoverHz', 'crossover', 0, 400, 5, (v) => (v <= 0 ? 'off' : Math.round(v) + ' Hz')),
       slider('transient', 'transient relax', 0, 1, 0.01, pct),
       msRow,
