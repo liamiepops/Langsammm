@@ -44,6 +44,11 @@
     panelOpen: true,
   };
 
+  // Development-only features. `build.ps1 -Release` rewrites this line to
+  // false and fails the build if it cannot find it, so nothing gated on it can
+  // reach a published build by accident.
+  const DEV = true;
+
   const state = Object.assign({}, DEFAULTS);
   let abHeld = false;
 
@@ -144,8 +149,9 @@
     };
   }
 
-  function pushParams() {
+  function pushParams(snap) {
     const p = paramBlock();
+    if (snap) p.snap = true;
     for (const rec of records) {
       if (rec.node) rec.node.port.postMessage({ type: 'params', params: p });
     }
@@ -830,18 +836,21 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     const loudRow = h('div', { class: 'ctl' }, loudLb, loudBtn, h('span', { class: 'v' }, ''));
     loudLb.append(qButton('loudnessMatch', loudRow));
 
-    // compare
-    const cmp = h('div', { class: 'cmp' }, '');
+    // compare, development builds only
+    const cmp = DEV ? h('div', { class: 'cmp' }, '') : null;
     controls._cmp = {
       el: cmp,
       set: () => {
+        if (!cmp) return;
         cmp.className = abHeld ? 'cmp held' : 'cmp';
         cmp.textContent = abHeld ? 'SLOWED ONLY' : 'HOLD ALT+A FOR SLOWED ONLY';
       },
     };
-    cmp.addEventListener('pointerdown', () => setAb(true));
-    cmp.addEventListener('pointerup', () => setAb(false));
-    cmp.addEventListener('pointerleave', () => setAb(false));
+    if (cmp) {
+      cmp.addEventListener('pointerdown', () => setAb(true));
+      cmp.addEventListener('pointerup', () => setAb(false));
+      cmp.addEventListener('pointerleave', () => setAb(false));
+    }
 
     const statusEl = h('div', { class: 'status' });
     controls._status = { el: statusEl };
@@ -943,9 +952,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   }
 
   function setAb(on) {
-    if (abHeld === on) return;
+    if (!DEV || abHeld === on) return;
     abHeld = on;
-    pushParams();
+    // No smoothing on this one. Judging a crossfade is not an A/B.
+    pushParams(true);
     if (controls._cmp) controls._cmp.set();
   }
 
@@ -992,6 +1002,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         if (k === 's') {
           togglePanel();
         } else if (k === 'a') {
+          if (!DEV) return;
           if (!e.repeat) setAb(true);
         } else if (k === 'x') {
           state.enabled = !state.enabled;

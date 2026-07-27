@@ -228,6 +228,19 @@ impl Processor {
         }
     }
 
+    /// Jump the smoothed parameters straight to their targets.
+    ///
+    /// The smoother exists so that dragging a slider does not zipper. An A/B
+    /// comparison wants the opposite: the change has to land at once or you are
+    /// judging the transition. Note that this is not instantaneous even so,
+    /// because overlap-add sums four windows into every output sample, so a
+    /// step change still resolves over one window.
+    pub fn snap_params(&mut self) {
+        self.s_mid = self.p.mid_wet;
+        self.s_side = self.p.side_wet;
+        self.s_trans = self.p.transient;
+    }
+
     fn rebuild_taper(&mut self) {
         let half = self.n / 2;
         let fc = self.p.crossover_hz.max(0.0);

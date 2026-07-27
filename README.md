@@ -160,11 +160,14 @@ YouTube enforces Trusted Types and would reject an `innerHTML` assignment.
 ## Build
 
 ```bash
-pwsh build.ps1
+pwsh build.ps1              # development
+pwsh build.ps1 -Release     # also writes dist/chrome-release and dist/firefox-release
 ```
 
 Runs the Rust tests, builds `wasm32-unknown-unknown`, copies the module into
-`extension/`. About 40 KB, no imports, no wasm-bindgen. That last part matters:
+`extension/`, checks the two manifests against each other, runs the worklet
+harness, and assembles `dist/firefox`. With `-Release` it additionally writes
+release folders for both browsers with development-only features compiled out. About 40 KB, no imports, no wasm-bindgen. That last part matters:
 `AudioWorkletGlobalScope` in Chrome has no `TextDecoder`, so the usual bindgen
 glue is a liability there.
 
@@ -246,7 +249,17 @@ itself subject to the page CSP. If it is, the panel will say `worklet blocked`
 and the worklet source will need another route in.
 
 Then open YouTube. Panel hotkeys: **alt+S** show or hide, **alt+X** on or off,
-**alt+A** hold to hear the dry slowed version.
+and in development builds **alt+A** hold to hear the dry slowed version.
+
+`alt+A` skips the parameter smoother, because judging a crossfade is not an A/B.
+Measured on a steady tone it reaches the dry signal to within 60 dB in 34.8 ms
+against 857.9 ms smoothed. That is inside one window and is the floor here:
+overlap-add sums four windows into every output sample, so no parameter change
+can resolve faster than the window length.
+
+It is a testing feature and does not ship. `build.ps1 -Release` rewrites the
+`DEV` flag in `page.js` to false, which removes the compare bar and the hotkey,
+and the build fails loudly if it cannot find the flag to rewrite.
 
 Closing the panel collapses it to a small pill in the same corner rather than
 hiding it completely, so it is always recoverable by clicking. The popup carries

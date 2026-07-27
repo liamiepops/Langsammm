@@ -51,6 +51,14 @@ pub extern "C" fn sf_limiter_gain(p: *mut Processor) -> f32 {
     unsafe { (*p).limiter_gain() }
 }
 
+/// Jump the smoothed parameters to their targets, for A/B switching.
+#[no_mangle]
+pub extern "C" fn sf_snap(p: *mut Processor) {
+    if !p.is_null() {
+        unsafe { (*p).snap_params() };
+    }
+}
+
 /// Writes `[depth_db, wobble_db, limiter_gain]`.
 #[no_mangle]
 pub extern "C" fn sf_stats(p: *mut Processor, ptr: *mut f32, len: usize) {

@@ -124,6 +124,9 @@ class SlowformProcessor extends AudioWorkletProcessor {
     this.pv[P_LOUDNESS] = p.loudnessMatch ? 1 : 0;
     this.pv[P_CEILING] = p.ceiling === undefined ? 0.99 : p.ceiling;
     this.ex.sf_set_params(this.proc, this.pp, P_COUNT);
+    // A/B switching asks for the change to land at once, so the smoother is
+    // skipped. Slider drags do not, or they zipper.
+    if (p.snap) this.ex.sf_snap(this.proc);
   }
 
   process(inputs, outputs) {
