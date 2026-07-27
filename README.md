@@ -37,13 +37,24 @@ line. That is what makes the A/B honest: nothing changes but the effect.
 | Knob | What it does |
 |---|---|
 | **amount** | Exponent on the whole gain curve. 100% is the full three-semitone warp. |
-| **crossover** | Frequency below which the warp is turned off, with a raised-cosine taper from fc/2 to fc. 0 disables it. Stops the low end being translated upward and thinned. |
+| **crossover** | Frequency below which the warp is turned off, with a raised-cosine taper from fc/2 to fc. 0 disables it. Stops the low end being translated upward and thinned. Default 150 Hz. |
 | **transient relax** | Half-wave rectified spectral flux, normalised by frame energy and compared against its own running mean, relaxes the exponent toward 0 on transient frames. |
 | **stereo M/S** | Switches the two engines from L/R to mid/side, with a separate amount for side. Centre-panned vocals live in mid, so this is a cheap stand-in for source separation. |
 
 There is a fifth worth having: **envelope width**, the cepstral lifter cutoff
 expressed in Hz, being the narrowest spectral feature the envelope keeps.
-Default 500 Hz, range 50 to 1500.
+Default 600 Hz, range 50 to 1500.
+
+Both sliders with an interior default carry a tick at that value and a detent
+three steps wide either side, so the default can be found by feel without
+being hard to leave.
+
+The width is deliberately a constant number of Hz rather than a musical
+interval. Harmonics are spaced f0 apart and formants roughly c/2L apart, so
+both structures this parameter separates are spaced linearly in frequency. A
+constant-interval width would be 59 Hz at 1 kHz and 476 Hz at 8 kHz, which
+would fall below f0 through the whole vocal range and comb exactly where voices
+sit.
 
 All four of the knobs above are factors of one exponent. `src/stft.rs` computes
 `expo = amount × taper[k] × relax`, so they differ only in what they vary over:

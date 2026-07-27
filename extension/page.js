@@ -36,9 +36,9 @@
     midWet: 1.0,
     sideWet: 1.0,
     stereoMs: false,
-    crossoverHz: 0,
+    crossoverHz: 150,
     transient: 0,
-    envResHz: 500,
+    envResHz: 600,
     fftSize: 2048,
     loudnessMatch: true,
     panelOpen: true,
@@ -476,7 +476,15 @@ canvas { display: block; width: 318px; height: 100px; border-radius: 6px; backgr
 .q:hover { background: #222634; }
 .q.on { border-color: #f2a54a; color: #f2a54a; }
 
-input[type=range] { width: 112px; accent-color: #f2a54a; margin: 0; }
+input[type=range] { width: 112px; accent-color: #f2a54a; margin: 0; display: block; }
+
+/* Default marker. Drawn rather than using a datalist, because browsers style
+   those inconsistently and the position has to line up with the thumb travel. */
+.trk { position: relative; width: 112px; height: 18px; flex: none;
+       display: flex; align-items: center; }
+.tick { position: absolute; bottom: 0; width: 2px; height: 4px; border-radius: 1px;
+        background: #6a7488; pointer-events: none; }
+.tick.at { background: #f2a54a; }
 
 .seg { display: flex; background: #222634; border-radius: 5px; padding: 2px; gap: 2px; }
 .seg button { font: 600 10px/1 ui-sans-serif, system-ui, sans-serif; padding: 4px 7px;
@@ -674,7 +682,15 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     );
   }
 
+  // Thumb width, needed to line the default marker up with where the thumb
+  // actually travels rather than with the raw element box.
+  const THUMB = 12;
+  const TRACK = 112;
+
   function slider(key, label, min, max, step, fmt, after) {
+    const def = DEFAULTS[key];
+    const marked = def > min && def < max;
+
     const val = h('span', { class: 'v' }, fmt(state[key]));
     const inp = h('input', {
       type: 'range',
@@ -682,22 +698,42 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       max: String(max),
       step: String(step),
       oninput: (e) => {
-        state[key] = parseFloat(e.target.value);
-        val.textContent = fmt(state[key]);
+        let v = parseFloat(e.target.value);
+        // Gentle detent on the default, three steps wide either side.
+        if (marked && Math.abs(v - def) <= step * 3) {
+          v = def;
+          e.target.value = String(v);
+        }
+        state[key] = v;
+        val.textContent = fmt(v);
+        if (tick) tick.className = v === def ? 'tick at' : 'tick';
         pushParams();
         save();
         if (after) after();
       },
     });
     inp.value = String(state[key]);
+
+    let tick = null;
+    if (marked) {
+      const frac = (def - min) / (max - min);
+      tick = h('span', {
+        class: state[key] === def ? 'tick at' : 'tick',
+        title: 'default ' + fmt(def),
+      });
+      tick.style.left = THUMB / 2 + (TRACK - THUMB) * frac - 1 + 'px';
+    }
+    const track = h('span', { class: 'trk' }, inp, tick);
+
     const lb = h('span', { class: 'lb' }, label);
-    const row = h('div', { class: 'ctl' }, lb, inp, val);
+    const row = h('div', { class: 'ctl' }, lb, track, val);
     if (TIPS[key]) lb.append(qButton(key, row));
     controls[key] = {
       row,
       set(v) {
         inp.value = String(v);
         val.textContent = fmt(v);
+        if (tick) tick.className = v === def ? 'tick at' : 'tick';
       },
     };
     return row;

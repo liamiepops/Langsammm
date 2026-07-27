@@ -136,9 +136,11 @@ const opt = {
   amount: 1,
   stereo: 'lr',
   side: 1,
-  crossover: 0,
+  // These two mirror the extension's defaults. Pass them explicitly when
+  // measuring, so a change here cannot quietly move a baseline.
+  crossover: 150,
   transient: 0,
-  envres: 500,
+  envres: 600,
   fft: 2048,
   loud: true,
   float: false,
