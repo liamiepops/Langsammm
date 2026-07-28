@@ -94,9 +94,14 @@ build. `bridge.js` reads its own manifest, finds `page.js` declared as a
 MAIN-world content script, and skips the injection. The code is shared with the
 Chrome build rather than duplicated.
 
-## Permissions
+## Permissions and data
 
-`storage` only, for the add-on's own settings. There are no `host_permissions`.
+`data_collection_permissions.required` is `["none"]`, and that is accurate. The
+add-on makes no network requests at runtime. The WebAssembly module is loaded
+from the add-on's own package, and `storage` holds nothing beyond the user's
+own slider positions.
+
+`storage` is the only permission. There are no `host_permissions`.
 The content scripts are limited to the three sites above, and
 `web_accessible_resources` is limited to the same three, so no other origin can
 load anything from this add-on.

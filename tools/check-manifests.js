@@ -37,6 +37,31 @@ check(
   'Firefox needs strict_min_version 128 or later for world: MAIN'
 );
 
+// AMO has rejected uploads without this since 3 November 2025. An extension
+// that collects nothing has to say so rather than stay silent.
+const DATA_KINDS = [
+  'none', 'authenticationInfo', 'bookmarksInfo', 'browsingActivity',
+  'financialAndPaymentInfo', 'healthInfo', 'locationInfo', 'personalCommunications',
+  'personallyIdentifyingInfo', 'searchTerms', 'websiteActivity', 'websiteContent',
+];
+const dcp = gecko && gecko.data_collection_permissions;
+check(!!dcp, 'Firefox manifest needs browser_specific_settings.gecko.data_collection_permissions');
+if (dcp) {
+  const req = dcp.required;
+  check(Array.isArray(req) && req.length > 0, 'data_collection_permissions.required must be a non-empty array');
+  for (const v of req || []) {
+    check(DATA_KINDS.includes(v), `unknown data collection kind: ${v}`);
+  }
+  check(
+    !(req || []).includes('technicalAndInteraction'),
+    'technicalAndInteraction may only appear under optional'
+  );
+  check(
+    !((req || []).includes('none') && req.length > 1),
+    '"none" must stand alone when used'
+  );
+}
+
 // Injection routes.
 const mainWorld = (m) => (m.content_scripts || []).filter((cs) => cs.world === 'MAIN');
 check(mainWorld(chrome).length === 0, 'Chrome manifest must not declare a MAIN-world script; bridge.js injects instead');
