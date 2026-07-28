@@ -7,7 +7,7 @@ target/
 
 # Build artifact, produced by build.ps1 from src/. Un-ignore this if you ever
 # want a clone to be loadable in Chrome without a Rust toolchain.
-extension/slowform.wasm
+extension/langsammm.wasm
 
 # Packaged output. build.ps1 assembles dist/firefox from extension/ with the
 # Firefox manifest swapped in.

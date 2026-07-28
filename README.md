@@ -13,7 +13,7 @@ humming is what a llama does to soothe its cria, which is the nod to Winamp's
 Three Ms, always. Two reads as a typo.
 
 The project directory, the crate, the wasm module and the internal message
-channels are all still called `slowform`, which was the working name. None of
+channels are all still called `langsammm`, which was the working name. None of
 that is user-facing, so renaming it is a separate job worth doing only once the
 name has settled.
 
@@ -353,7 +353,7 @@ that much, which is inside the usual tolerance but audible to some people on
 close-ups. Drop the window to 1024 for video.
 
 While the effect is on, the playbackRate is re-asserted on every `ratechange`,
-so YouTube's own speed menu will not stick. Turn Slowform off to use it.
+so YouTube's own speed menu will not stick. Turn Langsammm off to use it.
 
 Switching between L/R and M/S mid-playback puts one window of mismatched
 samples through the analysis buffers and clicks once.

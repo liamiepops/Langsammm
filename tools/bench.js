@@ -3,7 +3,7 @@
 //
 //   node tools/bench.js [seconds]
 //
-// Feeds audio through sf_process in 128-sample blocks, the same render quantum
+// Feeds audio through lg_process in 128-sample blocks, the same render quantum
 // an AudioWorklet uses, and reports how much of one core a second of audio
 // costs. The audio thread's whole budget is one core, so the percentage is the
 // number that decides whether playback glitches.
@@ -15,7 +15,7 @@ const SR = 48000;
 const BLOCK = 128;
 const SECONDS = parseFloat(process.argv[2]) || 30;
 
-const wasm = fs.readFileSync(path.join(__dirname, '..', 'extension', 'slowform.wasm'));
+const wasm = fs.readFileSync(path.join(__dirname, '..', 'extension', 'langsammm.wasm'));
 const mod = new WebAssembly.Module(wasm);
 
 function makeSignal(n) {
@@ -39,13 +39,13 @@ const signal = makeSignal(SR * 2);
 
 function run(fftSize, opts) {
   const ex = new WebAssembly.Instance(mod, {}).exports;
-  const proc = ex.sf_new(SR, fftSize);
-  const lp = ex.sf_alloc(BLOCK);
-  const rp = ex.sf_alloc(BLOCK);
-  const pp = ex.sf_alloc(9);
-  const ep = ex.sf_alloc(128);
-  const op = ex.sf_alloc(128);
-  const sp = ex.sf_alloc(3);
+  const proc = ex.lg_new(SR, fftSize);
+  const lp = ex.lg_alloc(BLOCK);
+  const rp = ex.lg_alloc(BLOCK);
+  const pp = ex.lg_alloc(9);
+  const ep = ex.lg_alloc(128);
+  const op = ex.lg_alloc(128);
+  const sp = ex.lg_alloc(3);
 
   const pv = new Float32Array(ex.memory.buffer, pp, 9);
   pv[0] = 1;
@@ -57,7 +57,7 @@ function run(fftSize, opts) {
   pv[6] = Math.pow(2, 3 / 12);
   pv[7] = opts.loud === false ? 0 : 1;
   pv[8] = 0.99;
-  ex.sf_set_params(proc, pp, 9);
+  ex.lg_set_params(proc, pp, 9);
 
   const lv = new Float32Array(ex.memory.buffer, lp, BLOCK);
   const rv = new Float32Array(ex.memory.buffer, rp, BLOCK);
@@ -69,7 +69,7 @@ function run(fftSize, opts) {
   for (let b = 0; b < 400; b++) {
     lv.set(signal.subarray(0, BLOCK));
     rv.set(signal.subarray(0, BLOCK));
-    ex.sf_process(proc, lp, rp, BLOCK);
+    ex.lg_process(proc, lp, rp, BLOCK);
   }
 
   const t0 = process.hrtime.bigint();
@@ -77,10 +77,10 @@ function run(fftSize, opts) {
     const off = (b * BLOCK) % (signal.length - BLOCK);
     lv.set(signal.subarray(off, off + BLOCK));
     rv.set(signal.subarray(off, off + BLOCK));
-    ex.sf_process(proc, lp, rp, BLOCK);
+    ex.lg_process(proc, lp, rp, BLOCK);
     if (snapEvery && b % snapEvery === 0) {
-      ex.sf_stats(proc, sp, 3);
-      ex.sf_snapshot(proc, ep, op, 128);
+      ex.lg_stats(proc, sp, 3);
+      ex.lg_snapshot(proc, ep, op, 128);
     }
   }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;

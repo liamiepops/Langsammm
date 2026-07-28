@@ -19,7 +19,7 @@ const LEVEL_INTERVAL = 0.4; // seconds between level reports
 const SNAP_POINTS = 128; // plot resolution, log-spaced 60 Hz to 16 kHz
 const SNAP_INTERVAL = 1 / 15; // seconds between panel snapshots
 
-class SlowformProcessor extends AudioWorkletProcessor {
+class LangsammmProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
     const o = (options && options.processorOptions) || {};
@@ -54,18 +54,18 @@ class SlowformProcessor extends AudioWorkletProcessor {
       const mod = new WebAssembly.Module(bytes);
       const inst = new WebAssembly.Instance(mod, {});
       this.ex = inst.exports;
-      this.proc = this.ex.sf_new(sampleRate, this.fftSize);
-      this.lp = this.ex.sf_alloc(MAX_BLOCK);
-      this.rp = this.ex.sf_alloc(MAX_BLOCK);
-      this.pp = this.ex.sf_alloc(P_COUNT);
-      this.ep = this.ex.sf_alloc(SNAP_POINTS);
-      this.op = this.ex.sf_alloc(SNAP_POINTS);
-      this.sp = this.ex.sf_alloc(3);
+      this.proc = this.ex.lg_new(sampleRate, this.fftSize);
+      this.lp = this.ex.lg_alloc(MAX_BLOCK);
+      this.rp = this.ex.lg_alloc(MAX_BLOCK);
+      this.pp = this.ex.lg_alloc(P_COUNT);
+      this.ep = this.ex.lg_alloc(SNAP_POINTS);
+      this.op = this.ex.lg_alloc(SNAP_POINTS);
+      this.sp = this.ex.lg_alloc(3);
       this.ready = true;
       this.pushParams();
       this.port.postMessage({
         type: 'ready',
-        latency: this.ex.sf_latency(this.proc) / sampleRate,
+        latency: this.ex.lg_latency(this.proc) / sampleRate,
         fftSize: this.fftSize,
         sampleRate,
       });
@@ -91,8 +91,8 @@ class SlowformProcessor extends AudioWorkletProcessor {
   }
 
   sendSnapshot() {
-    this.ex.sf_stats(this.proc, this.sp, 3);
-    const ok = this.ex.sf_snapshot(this.proc, this.ep, this.op, SNAP_POINTS);
+    this.ex.lg_stats(this.proc, this.sp, 3);
+    const ok = this.ex.lg_snapshot(this.proc, this.ep, this.op, SNAP_POINTS);
     const msg = {
       type: 'snap',
       depth: this.sv[0],
@@ -123,10 +123,10 @@ class SlowformProcessor extends AudioWorkletProcessor {
     this.pv[P_SHIFT] = p.shiftRatio;
     this.pv[P_LOUDNESS] = p.loudnessMatch ? 1 : 0;
     this.pv[P_CEILING] = p.ceiling === undefined ? 0.99 : p.ceiling;
-    this.ex.sf_set_params(this.proc, this.pp, P_COUNT);
+    this.ex.lg_set_params(this.proc, this.pp, P_COUNT);
     // A/B switching asks for the change to land at once, so the smoother is
     // skipped. Slider drags do not, or they zipper.
-    if (p.snap) this.ex.sf_snap(this.proc);
+    if (p.snap) this.ex.lg_snap(this.proc);
   }
 
   process(inputs, outputs) {
@@ -152,7 +152,7 @@ class SlowformProcessor extends AudioWorkletProcessor {
     this.views();
     this.lv.set(il.subarray(0, n));
     this.rv.set(ir.subarray(0, n));
-    this.ex.sf_process(this.proc, this.lp, this.rp, n);
+    this.ex.lg_process(this.proc, this.lp, this.rp, n);
     out[0].set(this.lv.subarray(0, n));
     if (out.length > 1) out[1].set(this.rv.subarray(0, n));
 
@@ -168,7 +168,7 @@ class SlowformProcessor extends AudioWorkletProcessor {
         type: 'level',
         inRms: Math.sqrt(this.inAcc / this.accN),
         outRms: Math.sqrt(this.outAcc / this.accN),
-        limiter: this.ex.sf_limiter_gain(this.proc),
+        limiter: this.ex.lg_limiter_gain(this.proc),
       });
       this.inAcc = 0;
       this.outAcc = 0;
@@ -186,4 +186,4 @@ class SlowformProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor('slowform', SlowformProcessor);
+registerProcessor('langsammm', LangsammmProcessor);

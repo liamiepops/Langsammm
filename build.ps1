@@ -65,11 +65,11 @@ try {
 
     cargo test --quiet
     cargo build --release --target wasm32-unknown-unknown
-    $src = Join-Path $PSScriptRoot 'target\wasm32-unknown-unknown\release\slowform.wasm'
-    $dst = Join-Path $PSScriptRoot 'extension\slowform.wasm'
+    $src = Join-Path $PSScriptRoot 'target\wasm32-unknown-unknown\release\langsammm.wasm'
+    $dst = Join-Path $PSScriptRoot 'extension\langsammm.wasm'
     Copy-Item $src $dst -Force
     $kb = [math]::Round((Get-Item $dst).Length / 1024, 1)
-    Write-Host "extension/slowform.wasm  $kb KB"
+    Write-Host "extension/langsammm.wasm  $kb KB"
 
     node (Join-Path $PSScriptRoot 'tools\check-manifests.js')
     node (Join-Path $PSScriptRoot 'tools\worklet-harness.js') | Select-Object -Last 1
@@ -105,11 +105,11 @@ try {
         }
         # The built artifact is excluded on purpose: the point is that they
         # produce it themselves and compare.
-        Remove-Item (Join-Path $stage 'extension\slowform.wasm') -Force -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $stage 'extension\langsammm.wasm') -Force -ErrorAction SilentlyContinue
         foreach ($f in 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'build.ps1', 'REVIEWERS.md', 'README.md') {
             Copy-Item (Join-Path $PSScriptRoot $f) $stage -Force
         }
-        "$sha  extension/slowform.wasm" | Set-Content (Join-Path $stage 'SHA256SUMS') -NoNewline
+        "$sha  extension/langsammm.wasm" | Set-Content (Join-Path $stage 'SHA256SUMS') -NoNewline
 
         $source = Join-Path $distRoot "langsammm-$version-source.zip"
         if (Test-Path $source) { Remove-Item $source -Force }

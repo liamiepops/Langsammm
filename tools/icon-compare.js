@@ -18,7 +18,7 @@ const NOTES = {
     role: 'current',
     at16: 'good',
     verdict:
-      'Chosen when the product was called Slowform, and it still says the right thing: two beats, then the same two spread apart. What it does not say is anything about the new name.',
+      'Chosen when the product was called Langsammm, and it still says the right thing: two beats, then the same two spread apart. What it does not say is anything about the new name.',
   },
   stretch: {
     role: 'alternative',

@@ -6,8 +6,8 @@
 // The worklet then warps the envelope back up by the same interval.
 
 (() => {
-  if (window.__slowformLoaded) return;
-  window.__slowformLoaded = true;
+  if (window.__langsammmLoaded) return;
+  window.__langsammmLoaded = true;
 
   // Chrome loads this by injected script tag, which carries the base URL on the
   // tag itself. Firefox loads it as a MAIN-world content script, where there is
@@ -26,8 +26,8 @@
     baseWaiters.splice(0).forEach((f) => f(BASE));
   }
 
-  const TO_PAGE = 'slowform:to-page';
-  const FROM_PAGE = 'slowform:from-page';
+  const TO_PAGE = 'langsammm:to-page';
+  const FROM_PAGE = 'langsammm:from-page';
   const IS_TOP = window.top === window;
 
   const DEFAULTS = {
@@ -66,7 +66,7 @@
   // ---------------------------------------------------------------- messaging
 
   function toBridge(msg) {
-    window.postMessage({ __slowform: FROM_PAGE, ...msg }, '*');
+    window.postMessage({ __langsammm: FROM_PAGE, ...msg }, '*');
   }
 
   let wasmBytes = null;
@@ -76,7 +76,7 @@
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__slowform !== TO_PAGE) return;
+    if (!d || d.__langsammm !== TO_PAGE) return;
 
     if (d.type === 'settings') {
       if (d.settings) {
@@ -205,7 +205,7 @@
   // several, and a silent one posting snapshots would fight the audible one
   // for the plot.
   function buildNode(c, owner) {
-    const node = new AudioWorkletNode(c, 'slowform', {
+    const node = new AudioWorkletNode(c, 'langsammm', {
       numberOfInputs: 1,
       numberOfOutputs: 1,
       outputChannelCount: [2],
@@ -252,8 +252,8 @@
   }
 
   async function attach(el) {
-    if (el.__slowformAttached) return;
-    el.__slowformAttached = true;
+    if (el.__langsammmAttached) return;
+    el.__langsammmAttached = true;
 
     let c;
     try {
@@ -332,7 +332,7 @@
 
   function scan() {
     document.querySelectorAll('video,audio').forEach((el) => {
-      if (!el.__slowformAttached) attach(el);
+      if (!el.__langsammmAttached) attach(el);
       else applyRate(el);
     });
   }

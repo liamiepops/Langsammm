@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const wasmB64 = fs.readFileSync(path.join(ROOT, 'extension', 'slowform.wasm')).toString('base64');
+const wasmB64 = fs.readFileSync(path.join(ROOT, 'extension', 'langsammm.wasm')).toString('base64');
 
 // A real analysis frame, so the plot on the page is measured rather than drawn.
 const F = [60,64,68,72,77,82,87,93,99,105,112,119,127,135,144,153,163,173,185,196,209,223,237,252,268,286,304,324,344,367,390,415,442,471,501,533,568,604,643,684,728,775,825,878,935,995,1059,1128,1200,1277,1360,1447,1541,1640,1745,1858,1977,2105,2240,2385,2538,2702,2876,3061,3258,3468,3691,3929,4182,4451,4738,5043,5368,5713,6081,6473,6890,7333,7806,8308,8843,9413,10019,10664,11351,12082,12860,13689,14570,15508];
@@ -300,18 +300,18 @@ class W extends AudioWorkletProcessor{
   constructor(o){super();
     const b=o.processorOptions.bytes;
     this.ex=new WebAssembly.Instance(new WebAssembly.Module(b),{}).exports;
-    this.p=this.ex.sf_new(sampleRate,2048);
-    this.lp=this.ex.sf_alloc(1024); this.rp=this.ex.sf_alloc(1024);
-    this.pp=this.ex.sf_alloc(9);
+    this.p=this.ex.lg_new(sampleRate,2048);
+    this.lp=this.ex.lg_alloc(1024); this.rp=this.ex.lg_alloc(1024);
+    this.pp=this.ex.lg_alloc(9);
     this.set(1);
     this.lv=new Float32Array(this.ex.memory.buffer,this.lp,1024);
     this.rv=new Float32Array(this.ex.memory.buffer,this.rp,1024);
-    this.port.onmessage=e=>{this.set(e.data.amount);this.ex.sf_snap(this.p);};
+    this.port.onmessage=e=>{this.set(e.data.amount);this.ex.lg_snap(this.p);};
   }
   set(a){
     const pv=new Float32Array(this.ex.memory.buffer,this.pp,9);
     pv[0]=a;pv[1]=a;pv[2]=150;pv[3]=0;pv[4]=0;pv[5]=600;pv[6]=Math.pow(2,.25);pv[7]=1;pv[8]=0.99;
-    this.ex.sf_set_params(this.p,this.pp,9);
+    this.ex.lg_set_params(this.p,this.pp,9);
   }
   process(i,o){
     const inp=i[0],out=o[0];
@@ -319,7 +319,7 @@ class W extends AudioWorkletProcessor{
     const n=out[0].length;
     this.lv.set(inp[0].subarray(0,n));
     this.rv.set((inp.length>1?inp[1]:inp[0]).subarray(0,n));
-    this.ex.sf_process(this.p,this.lp,this.rp,n);
+    this.ex.lg_process(this.p,this.lp,this.rp,n);
     out[0].set(this.lv.subarray(0,n));
     if(out.length>1)out[1].set(this.rv.subarray(0,n));
     return true;

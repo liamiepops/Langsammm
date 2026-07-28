@@ -7,17 +7,17 @@
 
 (() => {
   const BASE = chrome.runtime.getURL('');
-  const TO_PAGE = 'slowform:to-page';
-  const FROM_PAGE = 'slowform:from-page';
+  const TO_PAGE = 'langsammm:to-page';
+  const FROM_PAGE = 'langsammm:from-page';
 
   function toPage(msg) {
-    window.postMessage({ __slowform: TO_PAGE, ...msg }, '*');
+    window.postMessage({ __langsammm: TO_PAGE, ...msg }, '*');
   }
 
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__slowform !== FROM_PAGE) return;
+    if (!d || d.__langsammm !== FROM_PAGE) return;
 
     if (d.type === 'hello') {
       toPage({ type: 'base', base: BASE });
@@ -40,7 +40,7 @@
       toPage({ type: 'wasm', bytes: wasmBytes.slice(0) });
       return;
     }
-    fetch(BASE + 'slowform.wasm')
+    fetch(BASE + 'langsammm.wasm')
       .then((r) => r.arrayBuffer())
       .then((b) => {
         wasmBytes = b;

@@ -1,4 +1,4 @@
-//! wasm entry points for the Slowform envelope warper.
+//! wasm entry points for the Langsammm envelope warper.
 //!
 //! Plain `extern "C"` exports, no wasm-bindgen. The consumer is an
 //! AudioWorkletGlobalScope, which in Chrome lacks TextDecoder and friends, so
@@ -14,7 +14,7 @@ use stft::{Params, Processor, P_COUNT};
 /// at startup and never freed, which keeps `memory.buffer` stable so the JS
 /// side can hold on to its views.
 #[no_mangle]
-pub extern "C" fn sf_alloc(len: usize) -> *mut f32 {
+pub extern "C" fn lg_alloc(len: usize) -> *mut f32 {
     let mut v = vec![0.0f32; len];
     let p = v.as_mut_ptr();
     std::mem::forget(v);
@@ -22,19 +22,19 @@ pub extern "C" fn sf_alloc(len: usize) -> *mut f32 {
 }
 
 #[no_mangle]
-pub extern "C" fn sf_new(sample_rate: f32, fft_size: usize) -> *mut Processor {
+pub extern "C" fn lg_new(sample_rate: f32, fft_size: usize) -> *mut Processor {
     Box::into_raw(Box::new(Processor::new(sample_rate, fft_size)))
 }
 
 #[no_mangle]
-pub extern "C" fn sf_delete(p: *mut Processor) {
+pub extern "C" fn lg_delete(p: *mut Processor) {
     if !p.is_null() {
         unsafe { drop(Box::from_raw(p)) };
     }
 }
 
 #[no_mangle]
-pub extern "C" fn sf_latency(p: *mut Processor) -> usize {
+pub extern "C" fn lg_latency(p: *mut Processor) -> usize {
     if p.is_null() {
         return 0;
     }
@@ -44,7 +44,7 @@ pub extern "C" fn sf_latency(p: *mut Processor) -> usize {
 /// Current output-ceiling gain. 1.0 means the limiter is doing nothing, which
 /// is what you want during a listening test.
 #[no_mangle]
-pub extern "C" fn sf_limiter_gain(p: *mut Processor) -> f32 {
+pub extern "C" fn lg_limiter_gain(p: *mut Processor) -> f32 {
     if p.is_null() {
         return 1.0;
     }
@@ -53,7 +53,7 @@ pub extern "C" fn sf_limiter_gain(p: *mut Processor) -> f32 {
 
 /// Jump the smoothed parameters to their targets, for A/B switching.
 #[no_mangle]
-pub extern "C" fn sf_snap(p: *mut Processor) {
+pub extern "C" fn lg_snap(p: *mut Processor) {
     if !p.is_null() {
         unsafe { (*p).snap_params() };
     }
@@ -61,7 +61,7 @@ pub extern "C" fn sf_snap(p: *mut Processor) {
 
 /// Writes `[depth_db, wobble_db, limiter_gain]`.
 #[no_mangle]
-pub extern "C" fn sf_stats(p: *mut Processor, ptr: *mut f32, len: usize) {
+pub extern "C" fn lg_stats(p: *mut Processor, ptr: *mut f32, len: usize) {
     if p.is_null() || ptr.is_null() || len < 3 {
         return;
     }
@@ -76,7 +76,7 @@ pub extern "C" fn sf_stats(p: *mut Processor, ptr: *mut f32, len: usize) {
 /// Fills two `points`-long buffers with the envelope before and after the
 /// applied gain, in dB, on a log-frequency axis. Returns 1 on success.
 #[no_mangle]
-pub extern "C" fn sf_snapshot(
+pub extern "C" fn lg_snapshot(
     p: *mut Processor,
     env_ptr: *mut f32,
     out_ptr: *mut f32,
@@ -99,7 +99,7 @@ pub extern "C" fn sf_snapshot(
 /// `ptr` points at `P_COUNT` floats laid out per the `P_*` constants in
 /// `stft`. Booleans travel as 0.0 or 1.0.
 #[no_mangle]
-pub extern "C" fn sf_set_params(p: *mut Processor, ptr: *const f32, len: usize) {
+pub extern "C" fn lg_set_params(p: *mut Processor, ptr: *const f32, len: usize) {
     if p.is_null() || ptr.is_null() || len < P_COUNT {
         return;
     }
@@ -119,7 +119,7 @@ pub extern "C" fn sf_set_params(p: *mut Processor, ptr: *const f32, len: usize) 
 }
 
 #[no_mangle]
-pub extern "C" fn sf_process(p: *mut Processor, lp: *mut f32, rp: *mut f32, len: usize) {
+pub extern "C" fn lg_process(p: *mut Processor, lp: *mut f32, rp: *mut f32, len: usize) {
     if p.is_null() || lp.is_null() || rp.is_null() || len == 0 {
         return;
     }

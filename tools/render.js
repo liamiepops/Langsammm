@@ -170,7 +170,7 @@ const shiftRatio = 1 / rate;
 
 // --------------------------------------------------------------------- render
 
-const wasmPath = path.join(__dirname, '..', 'extension', 'slowform.wasm');
+const wasmPath = path.join(__dirname, '..', 'extension', 'langsammm.wasm');
 const mod = new WebAssembly.Module(fs.readFileSync(wasmPath));
 const ex = new WebAssembly.Instance(mod, {}).exports;
 
@@ -179,12 +179,12 @@ let chans = input.channels.map((c) => resample(c, rate));
 if (chans.length === 1) chans = [chans[0], Float32Array.from(chans[0])];
 if (chans.length > 2) chans = chans.slice(0, 2);
 
-const proc = ex.sf_new(input.rate, num(opt.fft));
+const proc = ex.lg_new(input.rate, num(opt.fft));
 const BLOCK = 128;
-const lp = ex.sf_alloc(BLOCK);
-const rp = ex.sf_alloc(BLOCK);
+const lp = ex.lg_alloc(BLOCK);
+const rp = ex.lg_alloc(BLOCK);
 const P_COUNT = 9;
-const pp = ex.sf_alloc(P_COUNT);
+const pp = ex.lg_alloc(P_COUNT);
 const mem = () => ex.memory.buffer;
 
 const pv = new Float32Array(mem(), pp, P_COUNT);
@@ -197,7 +197,7 @@ pv[5] = num(opt.envres);
 pv[6] = shiftRatio;
 pv[7] = opt.loud ? 1 : 0;
 pv[8] = num(opt.ceiling);
-ex.sf_set_params(proc, pp, P_COUNT);
+ex.lg_set_params(proc, pp, P_COUNT);
 
 const lv = new Float32Array(mem(), lp, BLOCK);
 const rv = new Float32Array(mem(), rp, BLOCK);
@@ -213,14 +213,14 @@ for (let i = 0; i < n; i += BLOCK) {
     lv.fill(0, m);
     rv.fill(0, m);
   }
-  ex.sf_process(proc, lp, rp, m);
+  ex.lg_process(proc, lp, rp, m);
   outL.set(lv.subarray(0, m), i);
   outR.set(rv.subarray(0, m), i);
 }
 
 // Undo the analysis delay so the output lines up with a --amount 0 render
 // sample for sample.
-const lat = ex.sf_latency(proc);
+const lat = ex.lg_latency(proc);
 const trimL = outL.subarray(lat);
 const trimR = outR.subarray(lat);
 
@@ -239,10 +239,10 @@ console.log(
     } st`,
     `amount ${num(opt.amount)}  stereo ${opt.stereo}  crossover ${num(opt.crossover)} Hz  ` +
       `transient ${num(opt.transient)}  envres ${num(opt.envres)} Hz  fft ${num(opt.fft)}`,
-    `peak ${peak.toFixed(3)}   ceiling gain ${ex.sf_limiter_gain(proc).toFixed(3)}`,
+    `peak ${peak.toFixed(3)}   ceiling gain ${ex.lg_limiter_gain(proc).toFixed(3)}`,
     (() => {
-      const sp = ex.sf_alloc(3);
-      ex.sf_stats(proc, sp, 3);
+      const sp = ex.lg_alloc(3);
+      ex.lg_stats(proc, sp, 3);
       const s = new Float32Array(ex.memory.buffer, sp, 3);
       return `depth ${s[0].toFixed(2)} dB   wobble ${s[1].toFixed(2)} dB`;
     })(),

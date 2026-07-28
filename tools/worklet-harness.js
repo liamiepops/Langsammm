@@ -16,7 +16,7 @@ const SR = 48000;
 const BLOCK = 128;
 const FFT = 2048;
 
-const wasmBytes = fs.readFileSync(path.join(EXT, 'slowform.wasm'));
+const wasmBytes = fs.readFileSync(path.join(EXT, 'langsammm.wasm'));
 
 const PARAMS = {
   midWet: 1,
@@ -70,8 +70,8 @@ vm.runInContext(fs.readFileSync(path.join(EXT, 'worklet.js'), 'utf8'), sandbox, 
   filename: 'worklet.js',
 });
 
-if (!registered || registered.name !== 'slowform') {
-  throw new Error('worklet.js did not register a processor named "slowform"');
+if (!registered || registered.name !== 'langsammm') {
+  throw new Error('worklet.js did not register a processor named "langsammm"');
 }
 
 const node = new registered.cls({ processorOptions: { fftSize: FFT, params: PARAMS } });
@@ -92,10 +92,10 @@ if (Math.abs(ready.latency - FFT / SR) > 1e-9) {
 // ------------------------------------------------------- reference path
 
 const ex = new WebAssembly.Instance(new WebAssembly.Module(wasmBytes), {}).exports;
-const proc = ex.sf_new(SR, FFT);
-const lp = ex.sf_alloc(BLOCK);
-const rp = ex.sf_alloc(BLOCK);
-const pp = ex.sf_alloc(P_COUNT);
+const proc = ex.lg_new(SR, FFT);
+const lp = ex.lg_alloc(BLOCK);
+const rp = ex.lg_alloc(BLOCK);
+const pp = ex.lg_alloc(P_COUNT);
 const pv = new Float32Array(ex.memory.buffer, pp, P_COUNT);
 pv[0] = PARAMS.midWet;
 pv[1] = PARAMS.sideWet;
@@ -106,7 +106,7 @@ pv[5] = PARAMS.envResHz;
 pv[6] = PARAMS.shiftRatio;
 pv[7] = PARAMS.loudnessMatch ? 1 : 0;
 pv[8] = PARAMS.ceiling;
-ex.sf_set_params(proc, pp, P_COUNT);
+ex.lg_set_params(proc, pp, P_COUNT);
 const lv = new Float32Array(ex.memory.buffer, lp, BLOCK);
 const rv = new Float32Array(ex.memory.buffer, rp, BLOCK);
 
@@ -139,7 +139,7 @@ for (let b = 0; b < TOTAL; b += BLOCK) {
 
   lv.set(inL);
   rv.set(inR);
-  ex.sf_process(proc, lp, rp, BLOCK);
+  ex.lg_process(proc, lp, rp, BLOCK);
 
   for (let i = 0; i < BLOCK; i++) {
     worst = Math.max(worst, Math.abs(outL[i] - lv[i]), Math.abs(outR[i] - rv[i]));

@@ -35,7 +35,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["page.js", "worklet.js", "slowform.wasm"],
+      "resources": ["page.js", "worklet.js", "langsammm.wasm"],
       "matches": [
         "*://*.youtube.com/*",
         "*://*.soundcloud.com/*",

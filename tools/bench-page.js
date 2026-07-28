@@ -12,10 +12,10 @@ const fs = require('fs');
 const path = require('path');
 
 const wasmB64 = fs
-  .readFileSync(path.join(__dirname, '..', 'extension', 'slowform.wasm'))
+  .readFileSync(path.join(__dirname, '..', 'extension', 'langsammm.wasm'))
   .toString('base64');
 
-const HTML = `<title>Slowform benchmark</title>
+const HTML = `<title>Langsammm benchmark</title>
 <style>
   :root { --bg:#0b0d12; --fg:#e3e7f0; --dim:#868d9e; --rule:#22252e; --card:#12141a;
           --cyan:#5bc0d0; --amber:#f2a54a; --ok:#7fcf9b; --bad:#e08a80; }
@@ -52,7 +52,7 @@ const HTML = `<title>Slowform benchmark</title>
 </style>
 
 <div class="shell">
-  <h1>Slowform benchmark</h1>
+  <h1>Langsammm benchmark</h1>
   <p class="lede">
     Runs the shipped wasm over 128-sample blocks, the same render quantum an
     AudioWorklet uses, and reports what one second of audio costs. The audio
@@ -127,19 +127,19 @@ const SIG = signal(SR * 2);
 
 function bench(fftSize, opts) {
   const ex = new WebAssembly.Instance(MODULE, {}).exports;
-  const proc = ex.sf_new(SR, fftSize);
-  const lp = ex.sf_alloc(BLOCK), rp = ex.sf_alloc(BLOCK), pp = ex.sf_alloc(9);
-  const ep = ex.sf_alloc(128), op = ex.sf_alloc(128), sp = ex.sf_alloc(3);
+  const proc = ex.lg_new(SR, fftSize);
+  const lp = ex.lg_alloc(BLOCK), rp = ex.lg_alloc(BLOCK), pp = ex.lg_alloc(9);
+  const ep = ex.lg_alloc(128), op = ex.lg_alloc(128), sp = ex.lg_alloc(3);
   const pv = new Float32Array(ex.memory.buffer, pp, 9);
   pv[0] = 1; pv[1] = 1; pv[2] = 0; pv[3] = 0; pv[4] = 0;
   pv[5] = 500; pv[6] = Math.pow(2, 0.25); pv[7] = 1; pv[8] = 0.99;
-  ex.sf_set_params(proc, pp, 9);
+  ex.lg_set_params(proc, pp, 9);
   const lv = new Float32Array(ex.memory.buffer, lp, BLOCK);
   const rv = new Float32Array(ex.memory.buffer, rp, BLOCK);
 
   for (let b = 0; b < 400; b++) {           // warm the JIT
     lv.set(SIG.subarray(0, BLOCK)); rv.set(SIG.subarray(0, BLOCK));
-    ex.sf_process(proc, lp, rp, BLOCK);
+    ex.lg_process(proc, lp, rp, BLOCK);
   }
 
   const blocks = Math.floor((SR * SECONDS) / BLOCK);
@@ -149,10 +149,10 @@ function bench(fftSize, opts) {
     const off = (b * BLOCK) % (SIG.length - BLOCK);
     lv.set(SIG.subarray(off, off + BLOCK));
     rv.set(SIG.subarray(off, off + BLOCK));
-    ex.sf_process(proc, lp, rp, BLOCK);
+    ex.lg_process(proc, lp, rp, BLOCK);
     if (snapEvery && b % snapEvery === 0) {
-      ex.sf_stats(proc, sp, 3);
-      ex.sf_snapshot(proc, ep, op, 128);
+      ex.lg_stats(proc, sp, 3);
+      ex.lg_snapshot(proc, ep, op, 128);
     }
   }
   const ms = performance.now() - t0;
@@ -253,13 +253,13 @@ class Bench extends AudioWorkletProcessor {
     super();
     const b = o.processorOptions.bytes;
     this.ex = new WebAssembly.Instance(new WebAssembly.Module(b), {}).exports;
-    this.p = this.ex.sf_new(sampleRate, 2048);
-    this.lp = this.ex.sf_alloc(1024);
-    this.rp = this.ex.sf_alloc(1024);
-    const pp = this.ex.sf_alloc(9);
+    this.p = this.ex.lg_new(sampleRate, 2048);
+    this.lp = this.ex.lg_alloc(1024);
+    this.rp = this.ex.lg_alloc(1024);
+    const pp = this.ex.lg_alloc(9);
     const pv = new Float32Array(this.ex.memory.buffer, pp, 9);
     pv[0]=1;pv[1]=1;pv[2]=0;pv[3]=0;pv[4]=0;pv[5]=500;pv[6]=Math.pow(2,0.25);pv[7]=1;pv[8]=0.99;
-    this.ex.sf_set_params(this.p, pp, 9);
+    this.ex.lg_set_params(this.p, pp, 9);
     this.lv = new Float32Array(this.ex.memory.buffer, this.lp, 1024);
     this.rv = new Float32Array(this.ex.memory.buffer, this.rp, 1024);
     this.busy = 0; this.frames = 0;
@@ -272,7 +272,7 @@ class Bench extends AudioWorkletProcessor {
     const t0 = this.hasClock ? performance.now() : 0;
     this.lv.set(inp[0].subarray(0, n));
     this.rv.set((inp.length > 1 ? inp[1] : inp[0]).subarray(0, n));
-    this.ex.sf_process(this.p, this.lp, this.rp, n);
+    this.ex.lg_process(this.p, this.lp, this.rp, n);
     out[0].set(this.lv.subarray(0, n));
     if (out.length > 1) out[1].set(this.rv.subarray(0, n));
     if (this.hasClock) this.busy += performance.now() - t0;
