@@ -19,9 +19,18 @@ const zlib = require('zlib');
 
 // ------------------------------------------------------------------- palette
 
-const CYAN = [0x5b, 0xc0, 0xd0]; // the original envelope
-const AMBER = [0xf2, 0xa5, 0x4a]; // where the warp puts it
-const SLATE = [0x93, 0x9d, 0xb0]; // structure, never meaning
+// Named for what they mean, so a palette change cannot make the names lie.
+//
+// Chosen against two numbers that pull against each other. A mark has to sit on
+// a white toolbar and a near-black one, and solving for equal contrast on both
+// puts the ideal luminance at 0.208, worth 4.06:1 either way. Surviving
+// greyscale needs the pair pushed apart in luminance, which costs contrast on
+// one ground or the other. This pair sits at the knee: worst case 2.53:1 across
+// both, with a luminance gap of 0.185. The teal and orange it replaced measured
+// 2.05 and 0.018, so it is better on both counts.
+const CYAN = [0xa8, 0xa2, 0x9c]; // ash, the original envelope
+const AMBER = [0xd9, 0x3b, 0x2b]; // vermilion, where the warp puts it
+const SLATE = [0x8a, 0x86, 0x81]; // structure, never meaning
 
 // ------------------------------------------------------------------ concepts
 // Everything is drawn in a 24 x 24 design box. Shapes paint in order.

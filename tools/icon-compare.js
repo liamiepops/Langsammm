@@ -89,16 +89,16 @@ const HTML = `<title>Llullaby: three marks for the new name</title>
 <style>
   :root {
     --bg: #f5f6f8; --fg: #14161b; --dim: #5b6273; --rule: #dadde4; --card: #fff;
-    --accent: #a8620d; --cyan: #1f7f8f;
+    --accent: #a8620d; --cyan: #6e6a66;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #0a0b0f; --fg: #e3e7f0; --dim: #868d9e; --rule: #22252e; --card: #11131a;
-            --accent: #f2a54a; --cyan: #5bc0d0; }
+            --accent: #d93b2b; --cyan: #a8a29c; }
   }
   :root[data-theme="dark"] { --bg: #0a0b0f; --fg: #e3e7f0; --dim: #868d9e; --rule: #22252e;
-            --card: #11131a; --accent: #f2a54a; --cyan: #5bc0d0; }
+            --card: #11131a; --accent: #d93b2b; --cyan: #a8a29c; }
   :root[data-theme="light"] { --bg: #f5f6f8; --fg: #14161b; --dim: #5b6273; --rule: #dadde4;
-            --card: #fff; --accent: #a8620d; --cyan: #1f7f8f; }
+            --card: #fff; --accent: #a8620d; --cyan: #6e6a66; }
 
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg);
