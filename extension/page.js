@@ -361,31 +361,42 @@
     return e;
   }
 
-  // The mark, matching tools/icons.js: two beats, then the same two spread
-  // apart. Built with createElementNS rather than innerHTML because YouTube
-  // enforces Trusted Types and would refuse the markup.
+  // The mark: one wave whose wavelength grows as it travels, ash handing over
+  // to vermilion. Emitted by `node tools/icons.js --svg`, so it comes from the
+  // same geometry as the PNGs. Regenerate rather than edit by hand.
+  //
+  // Built with createElementNS because YouTube enforces Trusted Types and would
+  // refuse an innerHTML assignment.
+  const MARK_VIEWBOX = '0.7 5.1 22.6 13.8';
+  const MARK_RATIO = 22.6 / 13.8;
+  const MARK_PATHS = [
+    [
+      '#a8a29c',
+      'M2 12L2.4 8.9L2.8 6.9L3.2 6.5L3.6 7.7L4 10.1L4.4 12.9L4.8 15.4L5.2 17.1L5.6 17.6L6 16.9L6.4 15.1L6.8 12.8L7.2 10.4L7.6 8.3L8 6.9L8.4 6.4L8.8 6.8L9.2 7.9L9.6 9.7L10 11.7L10.4 13.8L10.8 15.5L11.2 16.8',
+    ],
+    [
+      '#d93b2b',
+      'M11.2 16.8L11.6 17.5L12 17.5L12.4 16.9L12.8 15.7L13.2 14.2L13.6 12.5L14 10.7L14.4 9.1L14.8 7.8L15.2 6.9L15.6 6.4L16 6.5L16.4 7L16.8 7.9L17.2 9.2L17.6 10.6L18 12.1L18.4 13.6L18.8 15L19.2 16.1L19.6 16.9L20 17.4L20.4 17.6L20.8 17.4L21.2 16.9L21.6 16.1L22 15',
+    ],
+  ];
+
   function markSvg(height) {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '1.5 3 23 18');
+    svg.setAttribute('viewBox', MARK_VIEWBOX);
     svg.setAttribute('height', String(height));
-    svg.setAttribute('width', String(Math.round((height * 23) / 18)));
+    svg.setAttribute('width', String(Math.round(height * MARK_RATIO)));
     svg.setAttribute('aria-hidden', 'true');
-    const tick = (x, colour) => {
-      const l = document.createElementNS(NS, 'line');
-      l.setAttribute('x1', String(x));
-      l.setAttribute('x2', String(x));
-      l.setAttribute('y1', '4.5');
-      l.setAttribute('y2', '19.5');
-      l.setAttribute('stroke', colour);
-      l.setAttribute('stroke-width', '3');
-      l.setAttribute('stroke-linecap', 'round');
-      return l;
-    };
-    svg.append(tick(3, '#a8a29c'));
-    svg.append(tick(7, '#a8a29c'));
-    svg.append(tick(15, '#d93b2b'));
-    svg.append(tick(23, '#d93b2b'));
+    for (const [colour, d] of MARK_PATHS) {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', colour);
+      p.setAttribute('stroke-width', '2.6');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      svg.append(p);
+    }
     return svg;
   }
 

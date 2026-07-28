@@ -171,7 +171,7 @@ const CONCEPTS = {
 ///
 /// The gap ratio in `ticks` is 2:1. The real one is 2^(3/12) = 1.19, which is
 /// invisible at any icon size, so it is exaggerated deliberately.
-const CHOSEN = 'ticks';
+const CHOSEN = 'ritard';
 
 // ----------------------------------------------------------------- rasteriser
 
@@ -411,9 +411,40 @@ function cut(shapes, dir, prefix) {
 
 module.exports = { CONCEPTS, CHOSEN, SIZES, render, encodePng };
 
+/// Emits the chosen mark as inline SVG, so the copies in the panel and the
+/// popup are generated from the same geometry as the PNGs instead of being
+/// redrawn by hand and drifting.
+function svgFor(name, every = 4) {
+  const c = CONCEPTS[name];
+  const b = boundsOf(c.shapes);
+  const r = (v) => Math.round(v * 10) / 10;
+  const parts = [];
+  for (const s of c.shapes) {
+    const col = '#' + s.colour.map((v) => v.toString(16).padStart(2, '0')).join('');
+    if (s.kind === 'poly') {
+      const pts = s.pts.filter((_, i) => i % every === 0 || i === s.pts.length - 1);
+      const d = pts.map((p, i) => (i ? 'L' : 'M') + r(p[0]) + ' ' + r(p[1])).join('');
+      parts.push({ d, col, w: s.w });
+    } else if (s.kind === 'bar') {
+      parts.push({ d: 'M' + r(s.x) + ' ' + r(s.y0) + 'L' + r(s.x) + ' ' + r(s.y1), col, w: s.w });
+    } else {
+      throw new Error('svgFor does not handle shape kind: ' + s.kind);
+    }
+  }
+  return {
+    viewBox: [r(b.x0), r(b.y0), r(b.w), r(b.h)].join(' '),
+    ratio: b.w / b.h,
+    parts,
+  };
+}
+
 if (require.main === module) {
   const root = path.join(__dirname, '..');
-  if (process.argv.includes('--candidates')) {
+  if (process.argv.includes('--svg')) {
+    const name = process.argv[process.argv.indexOf('--svg') + 1] || CHOSEN;
+    const s = svgFor(name);
+    console.log(JSON.stringify({ name, ...s }, null, 2));
+  } else if (process.argv.includes('--candidates')) {
     for (const [name, c] of Object.entries(CONCEPTS)) {
       const out = cut(c.shapes, path.join(root, 'design', 'icon-candidates', name), 'icon');
       console.log(name.padEnd(10) + c.title.padEnd(20) + out.map((w) => w.bytes + 'B').join('  '));
