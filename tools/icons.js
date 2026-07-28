@@ -37,6 +37,27 @@ function hill(cx, halfW, peak, base, n = 64) {
   return pts;
 }
 
+/// A wave whose wavelength grows linearly from lam0 to lam1 across the span.
+///
+/// Integrating 2*pi/lambda(x) with lambda linear in x gives a logarithm, which
+/// keeps the phase rate finite everywhere. A power law such as sqrt(t) does
+/// not: its derivative is unbounded at the start, so the left edge collapses
+/// into a solid block.
+function decelWave(x0, x1, yMid, amp, lam0, lam1, n = 200) {
+  const L = x1 - x0;
+  const k = (2 * Math.PI * L) / (lam1 - lam0);
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const phase = k * Math.log((lam0 + (lam1 - lam0) * t) / lam0);
+    pts.push([x0 + L * t, yMid - amp * Math.sin(phase)]);
+  }
+  return pts;
+}
+
+const WAVE = decelWave(2, 22, 12, 5.6, 4.2, 10.5);
+const WAVE_SPLIT = Math.round(WAVE.length * 0.46);
+
 const CONCEPTS = {
   arch: {
     title: 'Twin arch',
@@ -86,6 +107,42 @@ const CONCEPTS = {
     shapes: [
       { kind: 'arc', cx: 12, cy: 20, r: 7, w: 3.2, colour: CYAN },
       { kind: 'poly', pts: [[6.5, 9.5], [12, 4], [17.5, 9.5]], w: 3.2, colour: AMBER },
+    ],
+  },
+
+  stretch: {
+    title: 'Stretched Ll',
+    blurb: 'The two L letters the name is built on, drawn as ticks with feet. The second foot is stretched, so the letterform itself is the slowdown.',
+    shapes: [
+      { kind: 'poly', pts: [[5, 3.5], [5, 17], [10, 17]], w: 3, colour: CYAN },
+      { kind: 'poly', pts: [[14, 3.5], [14, 17], [22, 17]], w: 3, colour: AMBER },
+    ],
+  },
+
+  ritard: {
+    title: 'Ritardando',
+    blurb: 'One wave whose wavelength grows as it travels, cyan handing over to amber. It is a sound wave, it is a rocking motion, and it is the tempo dropping, all in one stroke.',
+    shapes: [
+      { kind: 'poly', pts: WAVE.slice(0, WAVE_SPLIT + 1), w: 2.6, colour: CYAN },
+      { kind: 'poly', pts: WAVE.slice(WAVE_SPLIT), w: 2.6, colour: AMBER },
+    ],
+  },
+
+  llama: {
+    title: 'Llama',
+    blurb: 'Head and neck in profile as a filled silhouette, ears picked out in amber. The most literal reading of the name, and the one that asks the most of 16 px.',
+    shapes: [
+      {
+        kind: 'polyfill',
+        colour: CYAN,
+        pts: [
+          [7.6, 22], [8.6, 14], [10.2, 8.4], [11.4, 6.2], [15.0, 6.4],
+          [19.6, 8.2], [20.8, 10.6], [18.4, 11.6], [14.6, 11.2],
+          [12.4, 14.5], [11.6, 22],
+        ],
+      },
+      { kind: 'ellipse', cx: 11.6, cy: 3.4, rx: 1.5, ry: 3.4, rot: -14, colour: AMBER },
+      { kind: 'ellipse', cx: 15.2, cy: 3.6, rx: 1.5, ry: 3.4, rot: 11, colour: AMBER },
     ],
   },
 
@@ -158,6 +215,30 @@ function hits(shape, x, y) {
       return sdSegment(x, y, shape.x, shape.y0, shape.x, shape.y1) <= shape.w / 2;
     case 'disc':
       return Math.hypot(x - shape.cx, y - shape.cy) <= shape.r;
+    case 'polyfill': {
+      // Ray casting. Lets a silhouette be described by its outline.
+      const p = shape.pts;
+      let inside = false;
+      for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+        const yi = p[i][1];
+        const yj = p[j][1];
+        if (yi > y !== yj > y) {
+          const t = (y - yi) / (yj - yi);
+          if (x < p[i][0] + t * (p[j][0] - p[i][0])) inside = !inside;
+        }
+      }
+      return inside;
+    }
+    case 'ellipse': {
+      const a = ((shape.rot || 0) * Math.PI) / 180;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const dx = x - shape.cx;
+      const dy = y - shape.cy;
+      const u = (dx * ca + dy * sa) / shape.rx;
+      const v = (-dx * sa + dy * ca) / shape.ry;
+      return u * u + v * v <= 1;
+    }
     default:
       return false;
   }
@@ -183,6 +264,9 @@ function boundsOf(shapes) {
       case 'poly':
         for (const p of s.pts) grow(p[0] - half, p[1] - half, p[0] + half, p[1] + half);
         break;
+      case 'polyfill':
+        for (const p of s.pts) grow(p[0], p[1], p[0], p[1]);
+        break;
       case 'fill':
         for (const p of s.pts) grow(p[0], p[1], p[0], p[1]);
         grow(x0, s.base, x1, s.base);
@@ -193,6 +277,12 @@ function boundsOf(shapes) {
       case 'disc':
         grow(s.cx - s.r, s.cy - s.r, s.cx + s.r, s.cy + s.r);
         break;
+      case 'ellipse': {
+        // Conservative box, so a rotation cannot clip the shape.
+        const r = Math.max(s.rx, s.ry);
+        grow(s.cx - r, s.cy - r, s.cx + r, s.cy + r);
+        break;
+      }
       default:
         break;
     }

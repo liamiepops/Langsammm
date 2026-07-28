@@ -1,14 +1,21 @@
-# Llullaby
+# Langsammm
 
 Plays audio slowed by three semitones and warps the spectral envelope back up
 by the same interval, so the tempo and pitch drop while the timbre stays where
 it was.
 
-The name is *lullaby* with the llama from Winamp's "it really whips the llama's
-ass" folded into the spelling. The project directory, the crate, the wasm
-module and the internal message channels are all still called `slowform`, which
-was the working name. None of that is user-facing, so renaming it is a separate
-job worth doing only if the name sticks.
+*Langsam* is the German tempo marking for slowly, roughly 40 to 60 bpm, the one
+Mahler used in place of the Italian. The trailing **mmm** does three jobs: it
+stretches the word the way the tool stretches the music, it is a hum, and
+humming is what a llama does to soothe its cria, which is the nod to Winamp's
+"it really whips the llama's ass".
+
+Three Ms, always. Two reads as a typo.
+
+The project directory, the crate, the wasm module and the internal message
+channels are all still called `slowform`, which was the working name. None of
+that is user-facing, so renaming it is a separate job worth doing only once the
+name has settled.
 
 Three semitones down is a playback rate of 2^(-3/12) = **84.09%**. Two
 semitones would be 89.09%. The interval is selectable from 1 to 7 in the panel

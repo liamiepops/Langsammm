@@ -14,45 +14,33 @@ const { CONCEPTS, render, encodePng } = require('./icons.js');
 // Assessment lives here rather than in the geometry table: it is a judgement
 // about the comparison, not a property of the mark.
 const NOTES = {
-  arch: {
-    role: 'current',
-    at16: 'weak',
-    verdict:
-      'The two arcs merge into one blob at 16 px and colour is the only thing left carrying the difference. It also shipped with a full-bleed tile, which Chrome’s guidance advises against.',
-  },
-  mass: {
-    role: 'alternative',
-    at16: 'strong',
-    verdict:
-      'Filled mass is the shape that best survives downscaling, and pairing solid against outline keeps the two states separable without leaning on colour. The only candidate that actually depicts an envelope and its shifted copy while still reading small.',
-  },
-  spectrum: {
-    role: 'alternative',
-    at16: 'strong',
-    verdict:
-      'The most legible of the set and the most conventional. Reads instantly as an analyser, which is both why it works and why it is the least ownable: a great deal of audio software already looks like this.',
-  },
   ticks: {
-    role: 'alternative',
+    role: 'current',
     at16: 'good',
     verdict:
-      'Legible once it became a single row, but the meaning did not follow. At 16 px it reads as a barcode rather than beats spread apart, so it communicates less than it costs.',
+      'Chosen when the product was called Slowform, and it still says the right thing: two beats, then the same two spread apart. What it does not say is anything about the new name.',
   },
-  lift: {
+  stretch: {
     role: 'alternative',
     at16: 'strong',
     verdict:
-      'Clean at every size and unambiguous about direction. It says something rises without saying what, so it would sit equally well on any pitch tool.',
+      'The clearest of the set at every size, and the only one that is also the name. Two letters double as two ticks, and the stretched foot carries the slowdown without needing a second idea. A monogram is easy to place next to a wordmark and easy to reuse as a favicon.',
   },
-  faders: {
+  ritard: {
     role: 'alternative',
     at16: 'good',
     verdict:
-      'The only one showing both motions at once, which is the truest summary of what the tool does. At 16 px the tracks fade out and it reduces to two dots at different heights, and that still carries the idea.',
+      'Three readings in one stroke: a sound wave, a rocking cradle, and a tempo falling away. It is the most descriptive mark here and the busiest, and at 16 px it holds together as a squiggle rather than as a wave you can count.',
+  },
+  llama: {
+    role: 'alternative',
+    at16: 'good',
+    verdict:
+      'The literal reading, and the one someone would remember after seeing it once. It carries none of the audio idea, and the silhouette leans a little giraffe, which is the risk with a long-necked animal reduced this far.',
   },
 };
 
-const ORDER = ['mass', 'faders', 'lift', 'spectrum', 'ticks'];
+const ORDER = ['stretch', 'ritard', 'llama'];
 
 function dataUri(size, shapes, grey) {
   let rgba = render(size, shapes);
@@ -97,7 +85,7 @@ function card(name, index) {
     </section>`;
 }
 
-const HTML = `<title>Slowform icon: five alternatives</title>
+const HTML = `<title>Llullaby: three marks for the new name</title>
 <style>
   :root {
     --bg: #f5f6f8; --fg: #14161b; --dim: #5b6273; --rule: #dadde4; --card: #fff;
@@ -175,15 +163,16 @@ const HTML = `<title>Slowform icon: five alternatives</title>
 </style>
 
 <div class="shell">
-  <div class="eyebrow">Slowform &middot; toolbar icon</div>
-  <h1>Five alternatives, judged small</h1>
+  <div class="eyebrow">Llullaby &middot; toolbar icon</div>
+  <h1>Three marks for the new name</h1>
   <p class="lede">
-    Chrome asks for <strong>96&times;96 of artwork in a 128 canvas</strong> with the
-    rest transparent, no edge or tile of its own because the browser may add one,
-    and it has to hold up on both toolbar colours. The guidance is also blunt
-    about method: if a mark is not legible at its minimum size, redesign it
-    rather than scaling it down. So every candidate here was cut at 16 px first
-    and judged there, and two of them were reworked after failing that test.
+    The name already carries the lullaby, so the mark should carry the llama and
+    the audio. Leaning on moons and stars would push it further toward the sleep
+    app it is going to be mistaken for anyway. Chrome still wants
+    <strong>96&times;96 of artwork in a 128 canvas</strong> with the rest
+    transparent and no tile of its own, and it still has to hold up on both
+    toolbar colours, so every candidate was cut at 16&nbsp;px first and judged
+    there. Two of these were rebuilt after failing that test.
   </p>
 
   <div class="rules">
@@ -194,25 +183,26 @@ const HTML = `<title>Slowform icon: five alternatives</title>
   </div>
 
   <div class="cards">
-${card('arch', 0)}
+${card('ticks', 0)}
 ${ORDER.map((n, i) => card(n, i + 1)).join('\n')}
   </div>
 
   <div class="close">
     <h2>Where I would land</h2>
     <p>
-      <strong>Solid and outline.</strong> It is the only candidate that depicts
-      the actual operation, an envelope and a shifted copy of itself, while still
-      being readable at 16 px, and it is the one that survives the greyscale
-      strip most convincingly because the two states differ in fill rather than
-      only in hue. <strong>Down and up</strong> is the runner-up and the better
-      choice if you would rather the mark describe what the listener gets than
-      what the code does. <strong>Moved peak</strong> is the safe option: the
-      most legible thing here and the least yours.
+      <strong>Stretched Ll.</strong> It is the sharpest of the four at 16&nbsp;px,
+      it survives the greyscale strip because the two letters differ in shape
+      before they differ in colour, and it is the only one that is simultaneously
+      the mark and the name. That last part matters more than it sounds: a
+      monogram sits beside a wordmark without competing, works as a favicon, and
+      gives you something to put on a store tile that is not a screenshot.
     </p>
     <p>
-      The one I would not keep is the current twin arch. It is the weakest of the
-      six at the size that matters most.
+      <strong>Ritardando</strong> is the one to pick if you want the mark to
+      describe the effect. It is the only candidate that says slowing down
+      without words. <strong>Llama</strong> is the one people will remember, and
+      it says nothing whatever about audio, which may be a fair trade for a
+      consumer extension.
     </p>
     <ol class="src">
       <li><a href="https://developer.chrome.com/docs/webstore/images">Supplying Images, Chrome for Developers</a></li>

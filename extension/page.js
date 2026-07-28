@@ -925,7 +925,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         'div',
         { class: 'hd' },
         markSvg(15),
-        h('span', { class: 'nm' }, 'Llullaby'),
+        h('span', { class: 'nm' }, 'Langsammm'),
         chip,
         h('span', { class: 'sp' }),
         power,
@@ -963,7 +963,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       'div',
       {
         class: 'launch',
-        title: 'show the Llullaby panel (alt+S)',
+        title: 'show the Langsammm panel (alt+S)',
         role: 'button',
         tabindex: '0',
         onclick: () => togglePanel(true),
@@ -975,7 +975,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         },
       },
       markSvg(12),
-      'llullaby'
+      'langsammm'
     );
 
     const tip = h('div', { class: 'tip' });
