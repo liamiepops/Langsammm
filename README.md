@@ -1,8 +1,14 @@
-# Slowform
+# Llullaby
 
 Plays audio slowed by three semitones and warps the spectral envelope back up
 by the same interval, so the tempo and pitch drop while the timbre stays where
 it was.
+
+The name is *lullaby* with the llama from Winamp's "it really whips the llama's
+ass" folded into the spelling. The project directory, the crate, the wasm
+module and the internal message channels are all still called `slowform`, which
+was the working name. None of that is user-facing, so renaming it is a separate
+job worth doing only if the name sticks.
 
 Three semitones down is a playback rate of 2^(-3/12) = **84.09%**. Two
 semitones would be 89.09%. The interval is selectable from 1 to 7 in the panel
