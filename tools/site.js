@@ -149,7 +149,7 @@ const HTML = `<title>Langsammm</title>
     ${mark(17)}
     <span class="word">Langsa<i class="m1">m</i><i class="m2">m</i><i class="m3">m</i></span>
     <span class="sp"></span>
-    <a href="https://github.com/liamiepops/slowform">Source</a>
+    <a href="https://github.com/liamiepops/Langsammm">Source</a>
   </div>
 </header>
 
