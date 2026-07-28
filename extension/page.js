@@ -491,12 +491,20 @@ input[type=range] { width: 112px; accent-color: #f2a54a; margin: 0; display: blo
               border: none; background: none; color: #7f879a; border-radius: 3px; }
 .seg button.sel { background: #343a4a; color: #e3e7f0; }
 
-.tip { position: relative; background: #262b38; border: 1px solid #3a4152; border-radius: 7px;
+/* Floats over the panel instead of sitting in the flow, so opening one does
+   not shove every control below it down the panel. */
+.tip { position: absolute; left: 13px; right: 13px; z-index: 6; display: none;
+       background: #262b38; border: 1px solid #3a4152; border-radius: 7px;
        padding: 8px 10px; font-size: 11px; line-height: 1.45; color: #d3d8e4;
-       box-shadow: 0 6px 20px rgba(0,0,0,.55); margin: 6px 0 2px; }
-.tip::before { content: ""; position: absolute; top: -5px; left: 22px; width: 8px; height: 8px;
-       background: #262b38; border-left: 1px solid #3a4152; border-top: 1px solid #3a4152;
+       box-shadow: 0 10px 28px rgba(0,0,0,.75); }
+.tip.show { display: block; }
+.tip::before { content: ""; position: absolute; top: -5px; left: var(--ax, 22px);
+       width: 8px; height: 8px; background: #262b38;
+       border-left: 1px solid #3a4152; border-top: 1px solid #3a4152;
        transform: rotate(45deg); }
+.tip.above::before { top: auto; bottom: -5px;
+       border-left: 0; border-top: 0;
+       border-right: 1px solid #3a4152; border-bottom: 1px solid #3a4152; }
 
 .cmp { margin-top: 11px; width: 100%; border: 1px solid #2a2f3b; background: #222634;
        border-radius: 6px; padding: 8px; color: #b6bccb;
@@ -511,40 +519,39 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
   const TIPS = {
     semitones:
-      'How far down the audio is taken. The player is set to this ratio with ' +
-      'pitch preservation off, so tempo, pitch and the spectral envelope all ' +
-      'drop together. The warp then lifts only the envelope back.',
+      'How far down the track is taken. The player runs at this ratio with ' +
+      'pitch preservation off, which drags the spectral envelope down along ' +
+      'with the pitch. The warp lifts the envelope back.',
     midWet:
-      'Exponent on the whole gain curve. At 100% the envelope is lifted the ' +
-      'full interval. Lower values land part way, and the amber curve above ' +
-      'moves with it.',
+      'How much of that lift is applied. At 100% the envelope returns the ' +
+      'full interval. At zero the two curves coincide and the output is the ' +
+      'input exactly.',
     envResHz:
-      'The narrowest spectral feature the envelope is allowed to keep. Widen ' +
-      'it and the envelope smooths out, so the warp becomes a broad tilt and ' +
-      'the formants stop moving. Narrow it past the fundamental of a sound ' +
-      'and the envelope starts tracking that sound’s harmonics, and shifting ' +
-      'a harmonic comb off its own harmonics is the shimmer you hear at the ' +
-      'bottom of the range. Watch depth and wobble as you drag.',
+      'The narrowest spectral feature the envelope keeps. Widen it and the ' +
+      'envelope smooths out, so the formants stop moving. Narrow it below a ' +
+      'sound’s fundamental and the envelope starts tracking that sound’s ' +
+      'harmonics, which is the shimmer at the bottom of the range.',
     crossoverHz:
-      'Turns the warp off below this frequency, tapering in from half of it. ' +
-      'At the default envelope width the warp barely acts down there ' +
-      'anyway, so expect little to change until you go above 300 Hz.',
+      'Turns the warp off below this frequency, fading in from half of it. ' +
+      'This keeps bass from being dragged upward. It does more on tracks ' +
+      'with a steep low cut, because the warp follows the spectrum’s slope.',
     transient:
-      'Eases the warp off on frames where spectral flux jumps above its ' +
-      'running mean, which is most drum hits. It scales the same exponent ' +
-      'that amount does, so at 100% a fully transient frame sits momentarily ' +
-      'at amount 0. On material with no transients it does nothing at any ' +
+      'Backs the warp off on frames where the spectrum jumps, which is mostly ' +
+      'drum hits. It drives the same control amount does, so a strong hit at ' +
+      '100% momentarily reaches bypass. Steady material is left alone at any ' +
       'setting.',
     stereoMs:
-      'M/S runs the two engines on mid and side rather than left and right. ' +
-      'Centre-panned vocals live in mid, so this is a cheap stand-in for ' +
-      'separating them out.',
+      'Processes mid and side instead of left and right. Vocals usually sit ' +
+      'in the middle, so this aims the warp at them and leaves the sides ' +
+      'alone.',
     fftSize:
-      'STFT size. Larger resolves the envelope better and adds delay, shown ' +
-      'on the right. Halve it for video so the audio does not lag the picture.',
+      'Analysis size. Larger reads the envelope more finely and adds delay, ' +
+      'shown to the right. Halve it for video so audio keeps up with the ' +
+      'picture.',
     loudnessMatch:
-      'Matches output level back to input over about a second, so holding ' +
-      'alt+A compares timbre rather than volume.',
+      'Matches the output level back to the input over about a second. ' +
+      'Without it the louder setting tends to win a comparison on loudness ' +
+      'alone.',
   };
 
   // ------------------------------------------------------------------ the plot
@@ -652,34 +659,54 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
   // -------------------------------------------------------------- panel build
 
-  function tipFor(key, row) {
-    if (activeTip === key) {
-      activeTip = null;
-    } else {
-      activeTip = key;
-    }
-    const existing = panel.wrap.querySelector('.tip');
-    if (existing) existing.remove();
+  function hideTip() {
+    activeTip = null;
+    if (!panel) return;
+    panel.tip.className = 'tip';
     for (const b of panel.wrap.querySelectorAll('.q')) b.classList.remove('on');
+  }
+
+  function tipFor(key, row, q) {
+    if (!panel) return;
     if (activeTip === key) {
-      const tip = h('div', { class: 'tip' }, TIPS[key] || '');
-      row.after(tip);
-      const q = row.querySelector('.q');
-      if (q) q.classList.add('on');
+      hideTip();
+      return;
     }
+    hideTip();
+    activeTip = key;
+    q.classList.add('on');
+
+    const tip = panel.tip;
+    tip.textContent = TIPS[key] || '';
+    tip.className = 'tip show';
+
+    // Measure once it is laid out, then flip above the row if there is no room
+    // below it. Rows are direct children of the fixed-position wrap, so
+    // offsetTop is already relative to the right box.
+    const gap = 6;
+    const below = row.offsetTop + row.offsetHeight + gap;
+    const height = tip.offsetHeight;
+    if (below + height > panel.wrap.clientHeight - gap) {
+      tip.className = 'tip show above';
+      tip.style.top = Math.max(gap, row.offsetTop - height - gap) + 'px';
+    } else {
+      tip.style.top = below + 'px';
+    }
+
+    // Point the arrow at the button that opened it.
+    const wrapBox = panel.wrap.getBoundingClientRect();
+    const qBox = q.getBoundingClientRect();
+    const x = qBox.left - wrapBox.left + qBox.width / 2 - 13 - 4;
+    tip.style.setProperty('--ax', Math.max(8, Math.min(wrapBox.width - 60, x)) + 'px');
   }
 
   function qButton(key, row) {
-    return h(
-      'button',
-      {
-        class: 'q',
-        title: 'what does this do',
-        'aria-label': 'explain',
-        onclick: () => tipFor(key, row),
-      },
-      '?'
-    );
+    const b = h('button', { class: 'q', title: 'what does this do', 'aria-label': 'explain' }, '?');
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tipFor(key, row, b);
+    });
+    return b;
   }
 
   // Thumb width, needed to line the default marker up with where the thumb
@@ -951,9 +978,19 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       'slowform'
     );
 
+    const tip = h('div', { class: 'tip' });
+    wrap.append(tip);
+
+    // Anywhere else in the panel dismisses it.
+    wrap.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t && t.closest && (t.closest('.q') || t.closest('.tip'))) return;
+      hideTip();
+    });
+
     root.append(style, wrap, launch);
     (document.body || document.documentElement).append(host);
-    panel = { host, wrap, launch };
+    panel = { host, wrap, launch, tip };
 
     plotDpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.round(318 * plotDpr);
@@ -981,6 +1018,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
   function togglePanel(open) {
     state.panelOpen = open === undefined ? !state.panelOpen : open;
+    if (!state.panelOpen) hideTip();
     save();
     syncPanel();
     pushWatch();
