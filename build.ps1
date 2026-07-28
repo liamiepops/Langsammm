@@ -9,7 +9,12 @@
 #                           dist/firefox-release with development-only
 #                           features compiled out.
 
-param([switch]$Release)
+#   ./build.ps1 -Package    a clean release build, then the two zips AMO wants:
+#                           the add-on and the reviewable source. Implies
+#                           -Release.
+
+param([switch]$Release, [switch]$Package)
+if ($Package) { $Release = $true }
 
 $ErrorActionPreference = 'Stop'
 Push-Location $PSScriptRoot
@@ -49,6 +54,15 @@ function New-Dist {
 }
 
 try {
+    # An incremental build and a clean build of the same source produce
+    # different bytes. Two clean builds agree exactly. So anything a reviewer
+    # will try to reproduce has to come from a clean build, or the hash they
+    # compute will not match the one submitted.
+    if ($Package) {
+        Write-Host 'cleaning, so the binary is reproducible from a fresh checkout'
+        cargo clean
+    }
+
     cargo test --quiet
     cargo build --release --target wasm32-unknown-unknown
     $src = Join-Path $PSScriptRoot 'target\wasm32-unknown-unknown\release\slowform.wasm'
@@ -67,6 +81,47 @@ try {
     if ($Release) {
         New-Dist -Name 'chrome-release' -Manifest 'manifest.json' -StripDev $true
         New-Dist -Name 'firefox-release' -Manifest 'manifest.firefox.json' -StripDev $true
+    }
+
+    if ($Package) {
+        $version = (Get-Content (Join-Path $PSScriptRoot 'extension\manifest.json') -Raw |
+                    ConvertFrom-Json).version
+        $sha = (Get-FileHash $dst -Algorithm SHA256).Hash.ToLower()
+        $distRoot = Join-Path $PSScriptRoot 'dist'
+
+        # 1. the add-on itself, built from the release folder so the testing
+        #    hotkey is not in it. manifest.json has to sit at the zip root.
+        $addon = Join-Path $distRoot "langsammm-$version-firefox.zip"
+        if (Test-Path $addon) { Remove-Item $addon -Force }
+        Compress-Archive -Path (Join-Path $distRoot 'firefox-release\*') -DestinationPath $addon
+
+        # 2. the reviewable source. Everything needed to rebuild the binary and
+        #    nothing that would make a reviewer hunt.
+        $stage = Join-Path $distRoot 'source-stage'
+        if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+        New-Item -ItemType Directory -Force $stage | Out-Null
+        foreach ($item in 'src', 'tools', 'extension') {
+            Copy-Item (Join-Path $PSScriptRoot $item) $stage -Recurse -Force
+        }
+        # The built artifact is excluded on purpose: the point is that they
+        # produce it themselves and compare.
+        Remove-Item (Join-Path $stage 'extension\slowform.wasm') -Force -ErrorAction SilentlyContinue
+        foreach ($f in 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'build.ps1', 'REVIEWERS.md', 'README.md') {
+            Copy-Item (Join-Path $PSScriptRoot $f) $stage -Force
+        }
+        "$sha  extension/slowform.wasm" | Set-Content (Join-Path $stage 'SHA256SUMS') -NoNewline
+
+        $source = Join-Path $distRoot "langsammm-$version-source.zip"
+        if (Test-Path $source) { Remove-Item $source -Force }
+        Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $source
+        Remove-Item $stage -Recurse -Force
+
+        Write-Host ''
+        Write-Host ("wasm sha256             " + $sha)
+        foreach ($z in $addon, $source) {
+            $kb = [math]::Round((Get-Item $z).Length / 1KB, 1)
+            Write-Host ("{0,-32}{1} KB" -f (Split-Path $z -Leaf), $kb)
+        }
     }
 }
 finally {

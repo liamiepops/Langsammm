@@ -1,0 +1,7 @@
+# Pinned so that a reviewer rebuilding the WebAssembly module gets the same
+# binary that was submitted. Without this, a different Rust version can produce
+# a different artifact and the comparison becomes inconclusive.
+[toolchain]
+channel = "1.97.1"
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
