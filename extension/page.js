@@ -337,11 +337,32 @@
     });
   }
 
-  new MutationObserver(() => scan()).observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
-  setInterval(scan, 1000);
+  // YouTube rewrites its DOM continuously, so an undebounced observer would run
+  // a document-wide query hundreds of times a second. Records without an added
+  // element are ignored outright, and the rest collapse into one scan.
+  let scanQueued = false;
+  function queueScan() {
+    if (scanQueued) return;
+    scanQueued = true;
+    setTimeout(() => {
+      scanQueued = false;
+      scan();
+    }, 300);
+  }
+
+  new MutationObserver((records) => {
+    for (const r of records) {
+      for (const node of r.addedNodes) {
+        if (node.nodeType === 1) {
+          queueScan();
+          return;
+        }
+      }
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+
+  // Slow safety net for anything the observer misses.
+  setInterval(scan, 3000);
   scan();
 
   // ----------------------------------------------------------------------- ui
@@ -1052,6 +1073,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     if (!panel.host.isConnected) {
       (document.body || document.documentElement).append(panel.host);
     }
+    // Everything below draws into a panel nobody is looking at.
+    if (!state.panelOpen) return;
     paintMeters();
     const el = controls._status.el;
     let msg = '';
@@ -1060,9 +1083,9 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     else if (ctx && ctx.state === 'suspended') msg = 'audio context suspended, click the page';
     else if (ctx) {
       const fresh = performance.now() - lastLevel.at < 1500;
-      const playing = Array.prototype.some.call(
-        document.querySelectorAll('video,audio'),
-        (m) => !m.paused && !m.muted && m.volume > 0
+      // The attached elements are already tracked, so this needs no DOM query.
+      const playing = records.some(
+        (r) => r.el && !r.el.paused && !r.el.muted && r.el.volume > 0
       );
       if (playing && fresh && lastLevel.inRms < 1e-5) {
         msg = 'element is playing but the tap is silent, probably cross-origin media';

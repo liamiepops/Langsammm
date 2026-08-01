@@ -240,6 +240,65 @@ if (node.outbox.slice(afterOff).some((m) => m.type === 'snap')) {
   bad++;
 }
 
+// Silence must stop costing anything. A paused media element still delivers a
+// zero-filled channel, so without this the transform chain runs forever.
+{
+  const inst = new registered.cls({ processorOptions: { fftSize: FFT, params: PARAMS } });
+  inst.port._onmessage({ data: { type: 'wasm', bytes: wasmBytes } });
+
+  // Count real DSP calls. A WebAssembly exports object is frozen, so the
+  // counter goes on a copy that the processor uses in its place.
+  let calls = 0;
+  const real = inst.ex.lg_process;
+  inst.ex = Object.assign({}, inst.ex, {
+    lg_process: (...a) => {
+      calls++;
+      return real(...a);
+    },
+  });
+  inst.buf = null; // force the memory views to be rebuilt against the copy
+
+  const quiet = new Float32Array(BLOCK);
+  const loud = new Float32Array(BLOCK);
+  for (let i = 0; i < BLOCK; i++) loud[i] = Math.sin((2 * Math.PI * 440 * i) / SR) * 0.3;
+  const run = (buf, blocks) => {
+    for (let b = 0; b < blocks; b++) {
+      inst.process([[buf, buf]], [[new Float32Array(BLOCK), new Float32Array(BLOCK)]], {});
+    }
+  };
+
+  run(loud, 200);
+  const afterAudio = calls;
+
+  calls = 0;
+  run(quiet, 400); // 51200 samples of silence, far past two windows
+  const duringSilence = calls;
+
+  calls = 0;
+  run(loud, 100);
+  const afterResume = calls;
+
+  const drainBlocks = Math.ceil((FFT * 2) / BLOCK);
+  console.log(
+    `\nsilence: ${duringSilence} of 400 blocks processed ` +
+      `(expected about ${drainBlocks} while the window drains)`
+  );
+  console.log(`resume:  ${afterResume} of 100 blocks processed`);
+
+  if (afterAudio !== 200) {
+    console.error('FAIL: audio blocks were skipped');
+    bad++;
+  }
+  if (duringSilence > drainBlocks + 2) {
+    console.error('FAIL: silence still runs the DSP');
+    bad++;
+  }
+  if (afterResume !== 100) {
+    console.error('FAIL: did not resume immediately when audio returned');
+    bad++;
+  }
+}
+
 // Parameter updates must reach the processor and change the output.
 node.port._onmessage({ data: { type: 'params', params: { ...PARAMS, midWet: 0, sideWet: 0 } } });
 const a = new Float32Array(BLOCK).fill(0.1);

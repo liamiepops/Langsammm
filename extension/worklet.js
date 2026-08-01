@@ -32,6 +32,11 @@ class LangsammmProcessor extends AudioWorkletProcessor {
     this.accN = 0;
     this.snapN = 0;
     this.wantSnap = false;
+    // Consecutive silent input samples, and how many of them mean the analysis
+    // buffers have drained. Set properly once the window size is known.
+    this.quiet = 0;
+    this.drain = 8192;
+    this.idle = false;
 
     this.port.onmessage = (e) => {
       const d = e.data;
@@ -61,6 +66,9 @@ class LangsammmProcessor extends AudioWorkletProcessor {
       this.ep = this.ex.lg_alloc(SNAP_POINTS);
       this.op = this.ex.lg_alloc(SNAP_POINTS);
       this.sp = this.ex.lg_alloc(3);
+      // Two windows of silence, comfortably past the one window of state the
+      // overlap-add holds.
+      this.drain = this.ex.lg_latency(this.proc) * 2;
       this.ready = true;
       this.pushParams();
       this.port.postMessage({
@@ -148,6 +156,32 @@ class LangsammmProcessor extends AudioWorkletProcessor {
       if (out.length > 1) out[1].set(ir);
       return true;
     }
+
+    // A paused media element still delivers a channel, filled with zeros, so
+    // without this the whole transform chain runs on silence for as long as the
+    // tab is open. Once silence has been arriving for longer than the analysis
+    // window, the internal buffers hold nothing but zeros and there is no work
+    // left to do. Stopping there is safe because the state is already zero, so
+    // resuming needs no reset and produces no click.
+    let silent = true;
+    for (let i = 0; i < n; i++) {
+      if (il[i] !== 0 || ir[i] !== 0) {
+        silent = false;
+        break;
+      }
+    }
+    this.quiet = silent ? this.quiet + n : 0;
+
+    if (this.quiet > this.drain) {
+      out[0].fill(0);
+      if (out.length > 1) out[1].fill(0);
+      if (!this.idle) {
+        this.idle = true;
+        this.port.postMessage({ type: 'level', inRms: 0, outRms: 0, limiter: 1, idle: true });
+      }
+      return true;
+    }
+    this.idle = false;
 
     this.views();
     this.lv.set(il.subarray(0, n));
