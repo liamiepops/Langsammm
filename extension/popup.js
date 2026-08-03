@@ -48,6 +48,9 @@ enabledBtn.onclick = () => {
   state.enabled = !state.enabled;
   commit();
 };
+document.getElementById('sets').onclick = () => {
+  window.open(chrome.runtime.getURL('sets.html'));
+};
 panelBtn.onclick = () => {
   state.panelOpen = !state.panelOpen;
   commit();

@@ -1,0 +1,120 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Langsammm sets</title>
+<style>
+  :root {
+    --ground:#15141a; --raised:#1d1c23; --rule:#302e38;
+    --ink:#efedea; --dim:#8e8983; --ash:#a8a29c; --verm:#d93b2b; --ok:#6bbf8a;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink);
+         font:14px/1.55 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:940px; margin:0 auto; padding:32px 24px 80px; }
+  h1 { font-size:20px; font-weight:650; letter-spacing:-.015em; margin:0;
+       display:flex; align-items:center; gap:9px; }
+  h1 svg { display:block; }
+  .sub { color:var(--dim); font-size:13px; margin:6px 0 26px; max-width:62ch; }
+
+  button, select, input {
+    font:inherit; color:var(--ink); background:#26252c; border:1px solid var(--rule);
+    border-radius:7px; padding:6px 10px;
+  }
+  button { cursor:pointer; }
+  button:hover { background:#302e36; }
+  button.primary { background:var(--verm); border-color:var(--verm); color:#fff; }
+  button.primary:hover { filter:brightness(1.08); }
+  button.tiny { padding:3px 7px; font-size:12px; line-height:1.2; }
+  button.danger:hover { border-color:var(--verm); color:var(--verm); background:#26252c; }
+
+  .cols { display:grid; grid-template-columns:250px 1fr; gap:22px; align-items:start; }
+  @media (max-width:760px) { .cols { grid-template-columns:1fr; } }
+
+  .card { background:var(--raised); border:1px solid var(--rule); border-radius:10px; }
+  .lbl { font:600 9.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing:.13em;
+         text-transform:uppercase; color:var(--dim); }
+
+  .setlist { padding:8px; display:flex; flex-direction:column; gap:4px; }
+  .setlist button { text-align:left; width:100%; background:transparent; border-color:transparent;
+                    display:flex; align-items:baseline; gap:8px; }
+  .setlist button:hover { background:#26252c; }
+  .setlist button.on { background:rgba(217,59,43,.16); border-color:var(--verm); }
+  .setlist .n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .setlist .c { font:11px/1 ui-monospace, Consolas, monospace; color:var(--dim); }
+
+  .head { display:flex; gap:10px; align-items:center; padding:14px 16px;
+          border-bottom:1px solid var(--rule); flex-wrap:wrap; }
+  .head input { flex:1; min-width:160px; }
+
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font:600 9.5px/1 ui-sans-serif, system-ui, sans-serif;
+       letter-spacing:.12em; text-transform:uppercase; color:var(--dim);
+       padding:12px 10px; border-bottom:1px solid var(--rule); }
+  td { padding:9px 10px; border-bottom:1px solid var(--rule); vertical-align:middle; }
+  tr:last-child td { border-bottom:0; }
+  td.i { width:34px; color:var(--dim); font:12px/1 ui-monospace, Consolas, monospace; }
+  td.t { max-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  td.t a { color:inherit; text-decoration:none; }
+  td.t a:hover { color:var(--verm); }
+  td.p { width:220px; font:11.5px/1.4 ui-monospace, Consolas, monospace; color:var(--ash);
+         font-variant-numeric:tabular-nums; }
+  td.act { width:120px; text-align:right; white-space:nowrap; }
+  td.act button { margin-left:3px; }
+
+  .empty { padding:28px 16px; color:var(--dim); font-size:13px; }
+  .foot { display:flex; gap:9px; padding:14px 16px; border-top:1px solid var(--rule);
+          flex-wrap:wrap; align-items:center; }
+  .foot .sp { flex:1; }
+  .toggle { display:flex; align-items:center; gap:7px; color:var(--dim); font-size:13px; }
+  .toggle button.on { background:rgba(107,191,138,.2); border-color:var(--ok); color:var(--ok); }
+  #msg { color:var(--verm); font-size:12.5px; min-height:18px; margin-top:10px; }
+  :focus-visible { outline:2px solid var(--verm); outline-offset:2px; }
+</style>
+
+<div class="wrap">
+  <h1>
+    <svg viewBox="0.7 5.1 22.6 13.8" height="18" width="29" aria-hidden="true">
+      <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="#a8a29c" d="M2 12L2.4 8.9L2.8 6.9L3.2 6.5L3.6 7.7L4 10.1L4.4 12.9L4.8 15.4L5.2 17.1L5.6 17.6L6 16.9L6.4 15.1L6.8 12.8L7.2 10.4L7.6 8.3L8 6.9L8.4 6.4L8.8 6.8L9.2 7.9L9.6 9.7L10 11.7L10.4 13.8L10.8 15.5L11.2 16.8"/>
+        <path stroke="#d93b2b" d="M11.2 16.8L11.6 17.5L12 17.5L12.4 16.9L12.8 15.7L13.2 14.2L13.6 12.5L14 10.7L14.4 9.1L14.8 7.8L15.2 6.9L15.6 6.4L16 6.5L16.4 7L16.8 7.9L17.2 9.2L17.6 10.6L18 12.1L18.4 13.6L18.8 15L19.2 16.1L19.6 16.9L20 17.4L20.4 17.6L20.8 17.4L21.2 16.9L21.6 16.1L22 15"/>
+      </g>
+    </svg>
+    Sets
+  </h1>
+  <p class="sub">
+    A set is an ordered list of tracks, each carrying its own settings. Make one
+    active, then play a track and press <b>add</b> in the on-page panel to
+    capture it with whatever the sliders are on.
+  </p>
+
+  <div class="cols">
+    <div class="card">
+      <div class="setlist" id="setlist"></div>
+      <div class="foot">
+        <button id="newset" class="primary">New set</button>
+      </div>
+    </div>
+
+    <div class="card" id="editor">
+      <div class="head">
+        <span class="lbl">Name</span>
+        <input id="name" type="text" placeholder="untitled">
+        <button id="activate">Make active</button>
+        <button id="delset" class="danger">Delete</button>
+      </div>
+      <div id="items"></div>
+      <div class="foot">
+        <div class="toggle">
+          Auto-advance <button id="auto" class="tiny">off</button>
+        </div>
+        <span class="sp"></span>
+        <button id="export">Export</button>
+        <button id="import">Import</button>
+        <input id="file" type="file" accept="application/json" hidden>
+      </div>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+</div>
+
+<script src="sets.js"></script>

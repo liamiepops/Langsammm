@@ -21,16 +21,34 @@
 
     if (d.type === 'hello') {
       toPage({ type: 'base', base: BASE });
-      sendSettings();
+      sendStore();
       sendWasm();
     } else if (d.type === 'save') {
       chrome.storage.local.set({ settings: d.settings });
+    } else if (d.type === 'store-set') {
+      // Generic writes, so per-track memory and sets do not each need their own
+      // message type. Only the keys listed in STORE are ever touched.
+      const patch = {};
+      for (const k of STORE) {
+        if (Object.prototype.hasOwnProperty.call(d.data || {}, k)) patch[k] = d.data[k];
+      }
+      if (Object.keys(patch).length) chrome.storage.local.set(patch);
     }
   });
 
-  function sendSettings() {
-    chrome.storage.local.get('settings', (r) => {
-      toPage({ type: 'settings', settings: r && r.settings ? r.settings : null });
+  // Everything the page realm is allowed to read or write.
+  const STORE = ['settings', 'tracks', 'sets', 'active'];
+
+  function sendStore() {
+    chrome.storage.local.get(STORE, (r) => {
+      const data = r || {};
+      toPage({ type: 'settings', settings: data.settings || null });
+      toPage({
+        type: 'store',
+        tracks: data.tracks || {},
+        sets: data.sets || [],
+        active: data.active || null,
+      });
     });
   }
 
@@ -50,8 +68,18 @@
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.settings) {
+    if (area !== 'local') return;
+    if (changes.settings) {
       toPage({ type: 'settings', settings: changes.settings.newValue, external: true });
+    }
+    // The set editor runs in its own page, so edits there have to reach any
+    // tab already playing.
+    if (changes.tracks || changes.sets || changes.active) {
+      const msg = { type: 'store', external: true };
+      if (changes.tracks) msg.tracks = changes.tracks.newValue || {};
+      if (changes.sets) msg.sets = changes.sets.newValue || [];
+      if (changes.active) msg.active = changes.active.newValue || null;
+      toPage(msg);
     }
   });
 
