@@ -95,6 +95,12 @@ try {
         if (Test-Path $addon) { Remove-Item $addon -Force }
         Compress-Archive -Path (Join-Path $distRoot 'firefox-release\*') -DestinationPath $addon
 
+        # The Chrome upload. Same code, its own manifest, and no source bundle
+        # because Google does not ask for one.
+        $cws = Join-Path $distRoot "langsammm-$version-chrome.zip"
+        if (Test-Path $cws) { Remove-Item $cws -Force }
+        Compress-Archive -Path (Join-Path $distRoot 'chrome-release\*') -DestinationPath $cws
+
         # 2. the reviewable source. Everything needed to rebuild the binary and
         #    nothing that would make a reviewer hunt.
         $stage = Join-Path $distRoot 'source-stage'
@@ -118,7 +124,7 @@ try {
 
         Write-Host ''
         Write-Host ("wasm sha256             " + $sha)
-        foreach ($z in $addon, $source) {
+        foreach ($z in $addon, $source, $cws) {
             $kb = [math]::Round((Get-Item $z).Length / 1KB, 1)
             Write-Host ("{0,-32}{1} KB" -f (Split-Path $z -Leaf), $kb)
         }
