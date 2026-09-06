@@ -72,7 +72,6 @@ try {
     Write-Host "extension/langsammm.wasm  $kb KB"
 
     node (Join-Path $PSScriptRoot 'tools\check-manifests.js')
-    node (Join-Path $PSScriptRoot 'tools\playlist-test.js') | Select-Object -Last 1
     node (Join-Path $PSScriptRoot 'tools\worklet-harness.js') | Select-Object -Last 1
 
     # Chrome loads extension/ directly. Firefox needs its own manifest, because

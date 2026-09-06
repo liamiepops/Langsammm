@@ -49,22 +49,8 @@
   // reach a published build by accident.
   const DEV = true;
 
-  // Which of the settings belong to a track. The rest describe the UI and stay
-  // global.
-  const PARAM_KEYS = [
-    'semitones', 'midWet', 'sideWet', 'stereoMs', 'crossoverHz',
-    'transient', 'envResHz', 'fftSize', 'loudnessMatch',
-  ];
-
   const state = Object.assign({}, DEFAULTS);
   let abHeld = false;
-
-  // Per-track memory and sets, mirrored from chrome.storage by the bridge.
-  let tracks = {};
-  let sets = [];
-  let active = null; // { setId, autoAdvance }
-  let trackKey = null;
-  let trackTitle = '';
 
   // Declared up here rather than beside the panel code, so that an early
   // failure in the audio path can report itself before the UI has been built.
@@ -100,12 +86,6 @@
         pushWatch();
         rescanRates();
       }
-    } else if (d.type === 'store') {
-      if (d.tracks) tracks = d.tracks;
-      if (d.sets) sets = d.sets;
-      if (d.active !== undefined) active = d.active;
-      if (d.external) applyBinding(true);
-      syncPanel();
     } else if (d.type === 'base') {
       setBase(d.base);
     } else if (d.type === 'wasm') {
@@ -153,7 +133,7 @@
   }
 
   function paramBlock() {
-    const dry = abHeld || !state.enabled || adMode;
+    const dry = abHeld || !state.enabled;
     return {
       midWet: dry ? 0 : state.midWet,
       sideWet: dry ? 0 : state.stereoMs ? state.sideWet : state.midWet,
@@ -304,11 +284,6 @@
       if (c.state === 'suspended') c.resume().catch(() => {});
       applyRate(el);
     });
-    // loadstart fires before any media data arrives, which is the only moment
-    // early enough to have the next track's parameters already in place.
-    el.addEventListener('loadstart', () => checkTrack('loadstart'));
-    el.addEventListener('loadedmetadata', () => checkTrack('metadata'));
-    el.addEventListener('ended', onEnded);
     applyRate(el);
   }
 
@@ -331,7 +306,7 @@
 
   let settingRate = false;
   function applyRate(el) {
-    const target = state.enabled && !adMode ? rateOf() : 1;
+    const target = state.enabled ? rateOf() : 1;
     try {
       el.preservesPitch = false;
       el.mozPreservesPitch = false;
@@ -354,203 +329,6 @@
   function rescanRates() {
     document.querySelectorAll('video,audio').forEach(applyRate);
   }
-
-  // ------------------------------------------------------------------- tracks
-
-  function storeSet(patch) {
-    toBridge({ type: 'store-set', data: patch });
-  }
-
-  // A key that survives navigation and identifies the same track next time.
-  // Bandcamp plays a whole album from one URL, so its key names the album and
-  // every track on it shares one entry.
-  function keyFor(href) {
-    let u;
-    try {
-      u = new URL(href);
-    } catch (e) {
-      return null;
-    }
-    const host = u.hostname.replace(/^www\./, '');
-    if (host.endsWith('youtube.com')) {
-      const v = u.searchParams.get('v');
-      return v ? 'yt:' + v : null;
-    }
-    if (host.endsWith('soundcloud.com')) {
-      const p = u.pathname.replace(/\/+$/, '');
-      return p.split('/').length >= 3 ? 'sc:' + p : null;
-    }
-    if (host.endsWith('bandcamp.com')) {
-      return u.pathname.length > 1 ? 'bc:' + host + u.pathname : null;
-    }
-    return 'url:' + host + u.pathname;
-  }
-
-  function titleNow() {
-    const t = document.title.replace(/\s*[-|]\s*(YouTube|SoundCloud).*$/i, '').trim();
-    return t || document.title || '';
-  }
-
-  function activeSet() {
-    if (!active || !active.setId) return null;
-    return sets.find((s) => s.id === active.setId) || null;
-  }
-
-  function setIndexOf(key) {
-    const s = activeSet();
-    if (!s || !key) return -1;
-    return s.items.findIndex((it) => it.key === key);
-  }
-
-  // Where the current parameters live, and therefore where slider edits go.
-  function binding() {
-    const i = setIndexOf(trackKey);
-    if (i >= 0) return { kind: 'set', index: i, set: activeSet() };
-    if (trackKey && tracks[trackKey]) return { kind: 'track' };
-    return { kind: 'global' };
-  }
-
-  function paramsFor(b) {
-    if (b.kind === 'set') return b.set.items[b.index].params || {};
-    if (b.kind === 'track') return tracks[trackKey].params || {};
-    return null;
-  }
-
-  // Load whatever the current track should sound like and put it in place. The
-  // push is snapped, so a set change lands before the first sample instead of
-  // gliding in over the next fifth of a second.
-  function applyBinding(force) {
-    const p = paramsFor(binding());
-    if (!p && !force) return;
-    const src = p || {};
-    let changed = false;
-    for (const k of PARAM_KEYS) {
-      const v = src[k] === undefined ? DEFAULTS[k] : src[k];
-      if (state[k] !== v) {
-        state[k] = v;
-        changed = true;
-      }
-    }
-    if (!changed && !force) return;
-    rescanRates();
-    pushParams(true);
-    syncPanel();
-  }
-
-  // Slider edits follow the binding: into the set item if this track is in the
-  // running set, into per-track memory if it has an entry, otherwise global.
-  function saveParams() {
-    const b = binding();
-    const p = {};
-    for (const k of PARAM_KEYS) p[k] = state[k];
-
-    if (b.kind === 'set') {
-      const copy = sets.map((s) => ({ ...s, items: s.items.slice() }));
-      const s = copy.find((x) => x.id === b.set.id);
-      s.items[b.index] = { ...s.items[b.index], params: p };
-      sets = copy;
-      storeSet({ sets });
-    } else if (b.kind === 'track') {
-      tracks = { ...tracks, [trackKey]: { ...tracks[trackKey], params: p, title: trackTitle } };
-      storeSet({ tracks });
-    } else {
-      save();
-    }
-  }
-
-  function addToSet() {
-    const s = activeSet();
-    if (!s || !trackKey) return;
-    const p = {};
-    for (const k of PARAM_KEYS) p[k] = state[k];
-    const copy = sets.map((x) => ({ ...x, items: x.items.slice() }));
-    const target = copy.find((x) => x.id === s.id);
-    target.items.push({ key: trackKey, url: location.href, title: trackTitle, params: p });
-    sets = copy;
-    storeSet({ sets });
-    syncPanel();
-  }
-
-  function removeFromSet() {
-    const b = binding();
-    if (b.kind !== 'set') return;
-    const copy = sets.map((x) => ({ ...x, items: x.items.slice() }));
-    const target = copy.find((x) => x.id === b.set.id);
-    target.items.splice(b.index, 1);
-    sets = copy;
-    storeSet({ sets });
-    syncPanel();
-  }
-
-  function rememberTrack(on) {
-    if (!trackKey) return;
-    const copy = { ...tracks };
-    if (on) {
-      const p = {};
-      for (const k of PARAM_KEYS) p[k] = state[k];
-      copy[trackKey] = { params: p, title: trackTitle, url: location.href, at: Date.now() };
-    } else {
-      delete copy[trackKey];
-    }
-    tracks = copy;
-    storeSet({ tracks });
-    syncPanel();
-  }
-
-  // YouTube swaps the source inside the same element and rewrites the URL
-  // without a page load, so neither signal alone is enough. loadstart is the
-  // one that fires before any media data arrives, which is what lets the
-  // parameters be in place before the first sample.
-  let lastHref = '';
-  function checkTrack(reason) {
-    const href = location.href;
-    const key = keyFor(href);
-    if (href === lastHref && key === trackKey) return;
-    lastHref = href;
-    if (key === trackKey) return;
-    trackKey = key;
-    trackTitle = titleNow();
-    applyBinding(true);
-    if (reason === 'ended') return;
-    syncPanel();
-  }
-
-  // An advert is a different source in the same element. Leaving the effect on
-  // would slow the advert down and, worse, leave the loudness matcher and the
-  // smoothers in a state the following track then inherits.
-  let adMode = false;
-  function checkAd() {
-    const p = document.querySelector('#movie_player, .html5-video-player');
-    const showing = !!(p && p.classList.contains('ad-showing'));
-    if (showing === adMode) return;
-    adMode = showing;
-    rescanRates();
-    pushParams(true);
-    syncPanel();
-  }
-
-  function advance(delta) {
-    const s = activeSet();
-    if (!s || !s.items.length) return;
-    const here = setIndexOf(trackKey);
-    let i = here < 0 ? 0 : here + delta;
-    if (i < 0) i = s.items.length - 1;
-    if (i >= s.items.length) i = 0;
-    const item = s.items[i];
-    if (item && item.url) location.href = item.url;
-  }
-
-  function onEnded() {
-    if (adMode) return;
-    if (!active || !active.autoAdvance) return;
-    if (setIndexOf(trackKey) < 0) return;
-    advance(1);
-  }
-
-  setInterval(() => {
-    checkTrack('poll');
-    checkAd();
-  }, 300);
 
   function scan() {
     document.querySelectorAll('video,audio').forEach((el) => {
@@ -717,29 +495,6 @@ canvas { display: block; width: 318px; height: 100px; border-radius: 6px; backgr
 .ro .n.alert { color: #e8c547; }
 
 .rule { height: 1px; background: #33313a; margin: 11px -13px; }
-
-/* where the current parameters live, and the running set */
-.bind { display: flex; align-items: center; gap: 7px; margin-top: 10px;
-        font: 11px/1.3 ui-sans-serif, system-ui, sans-serif; color: #8a8681; }
-.bind .to { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bind .to b { color: #d93b2b; font-weight: 600; }
-.bind button { font: 600 9.5px/1 ui-sans-serif, system-ui, sans-serif; padding: 4px 7px;
-               letter-spacing: .06em; text-transform: uppercase; }
-.setbar { margin-top: 9px; padding: 9px 10px; background: #1e1d23;
-          border: 1px solid #33313a; border-radius: 8px; }
-.setbar.hide { display: none; }
-.setbar .top { display: flex; align-items: center; gap: 7px; }
-.setbar .nm2 { flex: 1; font-weight: 620; font-size: 11.5px; color: #edebe8;
-               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.setbar .pos { font: 10px/1 ui-monospace, Consolas, monospace; color: #8a8681; }
-.setbar .cue { margin-top: 6px; font-size: 11px; color: #8a8681;
-               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.setbar .cue b { color: #b3aeaa; font-weight: 500; }
-.setbar .nav { display: flex; gap: 4px; }
-.setbar .nav button { padding: 3px 8px; font-size: 12px; line-height: 1; }
-.adflag { margin-top: 8px; padding: 6px 9px; border-radius: 6px; font-size: 11px;
-          background: rgba(232,197,71,.16); color: #e8c547; }
-.adflag.hide { display: none; }
 
 .ctl { display: flex; align-items: center; gap: 9px; margin: 7px 0; }
 .ctl .lb { flex: 1; color: #b3aeaa; font-size: 11.5px; display: flex; align-items: center; gap: 5px; }
@@ -1012,7 +767,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         val.textContent = fmt(v);
         if (tick) tick.className = v === def ? 'tick at' : 'tick';
         pushParams();
-        saveParams();
+        save();
         if (after) after();
       },
     });
@@ -1100,7 +855,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         state.semitones = parseFloat(e.target.value);
         rescanRates();
         pushParams();
-        saveParams();
+        save();
         syncPanel();
       },
     });
@@ -1119,7 +874,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     function setMs(v) {
       state.stereoMs = v;
       pushParams();
-      saveParams();
+      save();
       syncPanel();
     }
     controls.stereoMs = {
@@ -1144,7 +899,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     const fftSel = h('select', {
       onchange: (e) => {
         state.fftSize = parseInt(e.target.value, 10);
-        saveParams();
+        save();
         curveEnv = null;
         curveOut = null;
         smoothTop = null;
@@ -1165,7 +920,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         onclick: () => {
           state.loudnessMatch = !state.loudnessMatch;
           pushParams();
-          saveParams();
+          save();
           syncPanel();
         },
       },
@@ -1194,77 +949,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
     const statusEl = h('div', { class: 'status' });
     controls._status = { el: statusEl };
-
-    // where the settings are being saved, and a way to change it
-    const bindTo = h('span', { class: 'to' });
-    const bindBtn = h('button', {
-      onclick: () => {
-        const b = binding();
-        if (b.kind === 'set') removeFromSet();
-        else if (activeSet()) addToSet();
-        else rememberTrack(b.kind !== 'track');
-      },
-    }, '');
-    const bindRow = h('div', { class: 'bind' }, bindTo, bindBtn);
-
-    // the running set
-    const setName = h('span', { class: 'nm2' }, '');
-    const setPos = h('span', { class: 'pos' }, '');
-    const cue = h('div', { class: 'cue' });
-    const setBar = h(
-      'div',
-      { class: 'setbar hide' },
-      h(
-        'div',
-        { class: 'top' },
-        setName,
-        setPos,
-        h(
-          'div',
-          { class: 'nav' },
-          h('button', { onclick: () => advance(-1), title: 'previous' }, '‹'),
-          h('button', { onclick: () => advance(1), title: 'next' }, '›')
-        )
-      ),
-      cue
-    );
-
-    const adFlag = h('div', { class: 'adflag hide' }, 'advert playing, effect paused');
-
-    controls._bind = {
-      set: () => {
-        const b = binding();
-        bindBtn.style.display = trackKey ? '' : 'none';
-        if (b.kind === 'set') {
-          bindTo.textContent = '';
-          bindTo.append('saving to ', h('b', {}, b.set.name || 'set'), ' item ' + (b.index + 1));
-          bindBtn.textContent = 'remove';
-        } else if (activeSet()) {
-          bindTo.textContent = '';
-          bindTo.append('not in ', h('b', {}, activeSet().name || 'set'));
-          bindBtn.textContent = 'add';
-        } else if (b.kind === 'track') {
-          bindTo.textContent = '';
-          bindTo.append('saving to ', h('b', {}, 'this track'));
-          bindBtn.textContent = 'forget';
-        } else {
-          bindTo.textContent = 'saving to defaults';
-          bindBtn.textContent = 'remember';
-        }
-
-        const s = activeSet();
-        setBar.className = s ? 'setbar' : 'setbar hide';
-        if (s) {
-          const i = setIndexOf(trackKey);
-          setName.textContent = s.name || 'set';
-          setPos.textContent = (i < 0 ? '-' : i + 1) + '/' + s.items.length;
-          const nxt = i < 0 ? s.items[0] : s.items[(i + 1) % s.items.length];
-          cue.textContent = '';
-          cue.append('next  ', h('b', {}, (nxt && nxt.title) || 'end of set'));
-        }
-        adFlag.className = adMode ? 'adflag' : 'adflag hide';
-      },
-    };
 
     const wrap = h(
       'div',
@@ -1302,9 +986,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       sideRow,
       fftRow,
       loudRow,
-      bindRow,
-      setBar,
-      adFlag,
       cmp,
       statusEl
     );
@@ -1361,7 +1042,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     controls._chip.set();
     controls._semVal.set();
     controls._cmp.set();
-    controls._bind.set();
     controls._sideRow.className = state.stereoMs ? 'ctl' : 'ctl dim';
     panel.wrap.className = state.panelOpen ? 'wrap' : 'wrap closed';
     panel.launch.className = state.panelOpen ? 'launch' : 'launch show';
